@@ -2,124 +2,152 @@
 
 namespace SwingFilter {
 
-    Clock clock;
-
-    void __yield(BinObj* obj, short length, Line& line) {
-        obj->put(length);
-        obj->put(line.get_slope());
-        obj->put(line.get_intercept());
+    // Begin: compression
+    void Compression::__fit(Point2D& p) {
+        this->A_num += (p.y-this->pivot->y)*(p.x-this->pivot->x);
+        this->A_den += (p.x-this->pivot->x)*(p.x-this->pivot->x);
+    }
+    
+    void Compression::initialize(int count, char** params) {
+        this->error = atof(params[0]);
     }
 
-    Line __fit(std::vector<Point2D>& segment, Line& u, Line& l, Point2D& p) {
-        double A_num = 0, A_den = 0;
+    void Compression::finalize() {
+        double A_ig = this->A_num / this->A_den;
+        double temp = A_ig > this->u_line->get_slope() ? this->u_line->get_slope() : A_ig;
+        double a_ig = temp > this->l_line->get_slope() ? temp : this->l_line->get_slope();
+        double b_ig = this->pivot->y - a_ig * this->pivot->x;
 
-        for (Point2D& data : segment) {
-            A_num += (data.y-p.y)*(data.x-p.x);
-            A_den += (data.x-p.x)*(data.x-p.x);
+        Line line(a_ig, b_ig);
+        this->curr_end = new Point2D(this->index-1, line.subs(this->index-1));
+        this->yield();
+
+        if (this->pivot != nullptr) delete this->pivot;
+        if (this->u_line != nullptr) delete this->u_line;
+        if (this->l_line != nullptr) delete this->l_line;
+        if (this->prev_end != nullptr) delete this->prev_end;
+        if (this->curr_end != nullptr) delete this->curr_end;
+    }
+
+    BinObj* Compression::serialize() {
+        BinObj* obj = new BinObj;
+        obj->put((short)(this->curr_end->x - this->prev_end->x));
+        obj->put((float) this->curr_end->y);
+
+        return obj;
+    }
+
+    void Compression::compress(Univariate* data) {
+        Point2D p(this->index++, data->get_value());
+
+        if (this->pivot == nullptr) {
+            this->pivot = new Point2D(p.x, p.y);
+            
+            this->prev_end = new Point2D(0, p.y);
+            this->curr_end = prev_end;
+            this->yield();
         }
+        else if (this->u_line == nullptr) {
+            Line u_line = Line::line(*this->pivot, Point2D(p.x, p.y + this->error));
+            Line l_line = Line::line(*this->pivot, Point2D(p.x, p.y - this->error));
 
-        double A_ig = A_num / A_den;
-        double temp = A_ig > u.get_slope() ? u.get_slope() : A_ig;
-        double a_ig = temp > l.get_slope() ? temp : l.get_slope();
-        double b_ig = p.y - a_ig * p.x;
+            this->u_line = new Line(u_line.get_slope(), u_line.get_intercept());
+            this->l_line = new Line(l_line.get_slope(), l_line.get_intercept());
+        }
+        else {
+            if (this->l_line->subs(p.x) > p.y + this->error || p.y - this->error > this->u_line->subs(p.x)) {
+                double A_ig = this->A_num / this->A_den;
+                double temp = A_ig > this->u_line->get_slope() ? this->u_line->get_slope() : A_ig;
+                double a_ig = temp > this->l_line->get_slope() ? temp : this->l_line->get_slope();
+                double b_ig = this->pivot->y - a_ig * this->pivot->x;
 
-        return Line(a_ig, b_ig);
-    }
+                Line line(a_ig, b_ig);
+                this->curr_end = new Point2D(p.x-1, line.subs(p.x-1));
+                this->yield();
+                delete this->prev_end;
+                this->prev_end = this->curr_end; 
+                this->curr_end = nullptr;
 
-    void compress(TimeSeries& timeseries, float bound, std::string output) {
-        clock.start();
-        IterIO outputFile(output, false);
-        BinObj* compress_data = new BinObj;
+                delete this->pivot;
+                delete this->u_line;
+                delete this->l_line;
 
-        Univariate* d1 = (Univariate*) timeseries.next();
-        compress_data->put(d1->get_time());
-        Point2D p1(0, d1->get_value());
+                this->pivot = new Point2D(p.x-1, line.subs(p.x-1));
+                Line u_line = Line::line(*this->pivot, Point2D(p.x, p.y+this->error));
+                Line l_line = Line::line(*this->pivot, Point2D(p.x, p.y-this->error));
+                this->u_line = new Line(u_line.get_slope(), u_line.get_intercept());
+                this->l_line = new Line(l_line.get_slope(), l_line.get_intercept());
 
-        Univariate* d2 = (Univariate*) timeseries.next();
-        Point2D p2(1, d2->get_value());
-        Line u_line = Line::line(p1, Point2D(p2.x, p2.y+bound));
-        Line l_line = Line::line(p1, Point2D(p2.x, p2.y-bound));
-
-        unsigned short length = 2;
-        std::vector<Point2D> segment = {p1, p2};
-        while (timeseries.hasNext()) {
-            Point2D p(length, ((Univariate*) timeseries.next())->get_value());
-
-            if (length > 65000 || l_line.subs(p.x) > p.y + bound || p.y - bound > u_line.subs(p.x)) {
-                Line l = __fit(segment, u_line, l_line, p1);
-                __yield(compress_data, length, l);
-
-                p1 = Point2D(0, l.subs(length-1));
-                p2 = Point2D(1, p.y);
-                u_line = Line::line(p1, Point2D(p2.x, p2.y+bound));
-                l_line = Line::line(p1, Point2D(p2.x, p2.y-bound));
-
-                length = 2;
-                segment = {p1, p2};
+                this->A_den = 0;
+                this->A_num = 0;
+                this->__fit(*this->pivot);
             }
             else {
-                if (p.y + bound < u_line.subs(p.x)) {
-                    u_line = Line::line(p1, Point2D(p.x, p.y+bound));
+                if (p.y + this->error < this->u_line->subs(p.x)) {
+                    Line u_line = Line::line(*this->pivot, Point2D(p.x, p.y+this->error));
+                    this->u_line = new Line(u_line.get_slope(), u_line.get_intercept());
                 }
                 
-                if (p.y - bound > l_line.subs(p.x)) {
-                    l_line = Line::line(p1, Point2D(p.x, p.y-bound));
+                if (p.y - this->error > this->l_line->subs(p.x)) {
+                    Line l_line = Line::line(*this->pivot, Point2D(p.x, p.y-this->error));
+                    this->l_line = new Line(l_line.get_slope(), l_line.get_intercept());
                 }
+            }
 
-                length++;
-                segment.push_back(p);
+            this->__fit(p);
+        }
+    }
+    // End: compression
+
+    // Begin: decompression
+    void Decompression::initialize() {
+        // Do nothing
+    }
+
+    void Decompression::finalize() {
+        if (this->prev_end != nullptr) delete this->prev_end;
+    }
+
+    CSVObj* Decompression::decompress() {
+        if (this->prev_end == nullptr) {
+            unsigned short start = compress_data->getShort();
+            float value = compress_data->getFloat();
+            this->prev_end = new Point2D(start, value);
+
+            return nullptr;
+        }
+
+        CSVObj* base_obj = nullptr;
+        CSVObj* prev_obj = nullptr;
+
+        unsigned short length = compress_data->getShort();
+        float value = compress_data->getFloat();
+        Point2D* curr_end = new Point2D(this->prev_end->x + length, value);
+        Line line = Line::line(*curr_end, *this->prev_end);
+
+        delete this->prev_end;
+        this->prev_end = curr_end;
+
+        for (int i=this->index; i<=curr_end->x; i++) {
+            if (base_obj == nullptr) {
+                base_obj = new CSVObj;
+                base_obj->pushData(std::to_string(this->basetime + i * interval));
+                base_obj->pushData(std::to_string(line.subs(i)));
+
+                prev_obj = base_obj;
+            }
+            else {
+                CSVObj* obj = new CSVObj;
+                obj->pushData(std::to_string(this->basetime + i * interval));
+                obj->pushData(std::to_string(line.subs(i)));
+
+                prev_obj->setNext(obj);
+                prev_obj = obj;
             }
         }
-        
-        outputFile.writeBin(compress_data);
-        outputFile.close();
-        delete compress_data;
-        
-        clock.tick();
-        double avg_time = clock.getAvgDuration() / timeseries.size();
 
-        // Profile average latency
-        std::cout << std::fixed << "Time taken for each data point (ns): " << avg_time << "\n";
-        IterIO timeFile(output+".time", false);
-        timeFile.write("Time taken for each data point (ns): " + std::to_string(avg_time));
-        timeFile.close();
+        this->index = curr_end->x + 1;
+        return base_obj;
     }
-
-    void __decompress_segment(IterIO& file, int interval, time_t basetime, int length, float slope, float intercept) {
-        for (int i=0; i<length-1; i++) {
-            CSVObj obj;
-            obj.pushData(std::to_string(basetime + interval * i));
-            obj.pushData(std::to_string(i * slope + intercept));
-            file.write(&obj);
-        }
-    }
-
-    void decompress(std::string input, std::string output, int interval) {
-        IterIO inputFile(input, true, true);
-        IterIO outputFile(output, false);
-        BinObj* compress_data = inputFile.readBin();
-
-        time_t basetime = compress_data->getLong();
-        clock.start();
-        while (compress_data->getSize() != 0) {
-            unsigned short length = compress_data->getShort();
-            float slope = compress_data->getFloat();
-            float intercept = compress_data->getFloat();
-            __decompress_segment(outputFile, interval, basetime, length, slope, intercept);
-            
-            basetime += (length - 1) * interval;
-            clock.tick();
-        }
-
-        delete compress_data;
-        inputFile.close();
-        outputFile.close();
-
-        // Profile average latency
-        std::cout << std::fixed << "Time taken for each segment (ns): " << clock.getAvgDuration() << "\n";
-        IterIO timeFile(output+".time", false);
-        timeFile.write("Time taken for each segment (ns): " + std::to_string(clock.getAvgDuration()));
-        timeFile.close();
-    }
-
+    // End: decompression
 };

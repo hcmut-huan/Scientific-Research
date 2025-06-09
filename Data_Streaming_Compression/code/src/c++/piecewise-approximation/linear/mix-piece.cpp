@@ -1,431 +1,415 @@
-#include <map>
-#include <algorithm>
-
 #include "piecewise-approximation/linear.hpp"
 
 namespace MixPiece {
+    // Begin: Material 
+    Segment::Segment(long t, double a, double b) {
+        this->t = t;
+        this->a = a;
+        this->b = b;
+    }
 
-    struct Interval {
-        float a_u;
-        float a_l;
-        long t;
+    Segment::Segment(long t, double aMin, double aMax, double b) {
+        this->t = t;
+        this->aMin = aMin;
+        this->aMax = aMax;
+        this->b = b;
+        this->a = (aMin + aMax) / 2;
+    }
 
-        Interval(float a_u, float a_l, long t) {
-            this->a_u = a_u;
-            this->a_l = a_l;
-            this->t = t;
+    BBlock::BBlock(double b) {
+        this->b = b;
+        this->blocks.push_back(Block());
+    }
+
+    BBlock::BBlock(double b, double a_u, double a_l, long t) {
+        this->b = b;
+        this->blocks.push_back(Block(a_u, a_l, t));
+    }
+
+    void BBlock::push_back(double a_u, double a_l, long t) {
+        this->blocks.push_back(Block(a_u, a_l, t));
+    }
+
+    Segment BBlock::pop_back() {
+        Segment result(this->blocks.back().t[0], this->blocks.back().a_l, 
+            this->blocks.back().a_u, b);
+
+        this->blocks.pop_back();
+        return result;
+    }
+
+    void BBlock::sort() {
+        for (Block& block : this->blocks) {
+            std::sort(block.t.begin(), block.t.end());
         }
-    };
+    }
 
-    struct B_Block {
+    bool BBlock::is_intersect(double a_u, double a_l) {
+        return a_l <= this->blocks.back().a_u && a_u >= this->blocks.back().a_l;
+    }
 
-        struct Block {
-            float a_u;
-            float a_l;
-            std::vector<long> t;
+    void BBlock::intersect(double a_u, double a_l, long t) {
+        if (this->blocks.back().a_u > a_u) this->blocks.back().a_u = a_u;
+        if (this->blocks.back().a_l < a_l) this->blocks.back().a_l = a_l;
 
-            Block() {
-                this->a_u = INFINITY;
-                this->a_l = -INFINITY;
-            }
+        this->blocks.back().t.push_back(t);
+    }
 
-            Block(float a_u, float a_l, long t) {
-                this->a_u = a_u;
-                this->a_l = a_l;
-                this->t.push_back(t);
-            }
-        };
+    BBlock::Block::Block() {
+        this->a_u = INFINITY;
+        this->a_l = -INFINITY;
+    }
 
-        float b;
-        std::vector<Block> blocks;
+    BBlock::Block::Block(double a_u, double a_l, long t) {
+        this->a_u = a_u;
+        this->a_l = a_l;
+        this->t.push_back(t);
+    }
 
-        B_Block(float b) {
-            this->b = b;
-            this->blocks.push_back(Block());
+    ABlock::ABlock() {
+        this->a_u = INFINITY;
+        this->a_l = -INFINITY;
+    }
+
+    ABlock::ABlock(double b, double a_u, double a_l, long t) {
+        this->a_u = a_u;
+        this->a_l = a_l;
+
+        this->blocks.push_back(Block(b, t));
+    }
+
+    void ABlock::sort() {
+        std::sort(this->blocks.begin(), this->blocks.end(), 
+            [](const Block& a, const Block& b) { return a.t < b.t; });
+    }
+
+    bool ABlock::is_intersect(double a_u, double a_l) {
+        return a_l <= this->a_u && a_u >= this->a_l;
+    } 
+
+    void ABlock::intersect(double b, double a_u, double a_l, long t) {
+        if (this->a_u > a_u) this->a_u = a_u;
+        if (this->a_l < a_l) this->a_l = a_l;
+
+        this->blocks.push_back(Block(b, t));
+    }
+
+    ABlock::Block::Block(double b, long t) {
+        this->b = b;
+        this->t = t;
+    }
+    // End: Material
+
+    // Begin: compression
+    void Compression::initialize(int count, char** params) {
+        this->error = atof(params[0]);
+        this->n_segment = atoi(params[1]);
+    }
+
+    void Compression::finalize() {
+        if (this->flag > 0) {
+            this->intervals[this->b_1].push_back(Segment(this->index - 1, this->slp_l_1, this->slp_u_1, this->b_1));
+        }
+        else {
+            this->intervals[this->b_2].push_back(Segment(this->index - 1, this->slp_l_2, this->slp_u_2, this->b_2));
         }
 
-        B_Block(float b, float a_u, float a_l, long t) {
-            this->b = b;
-            this->blocks.push_back(Block(a_u, a_l, t));
-        }
+        this->__group();
+        this->intervals.clear();
+    }
 
-        bool is_intersect(float a_u, float a_l) {
-            return a_l <= this->blocks.back().a_u && a_u >= this->blocks.back().a_l;
-        }
-
-        void intersect(float a_u, float a_l, long t) {
-            if (this->blocks.back().a_u > a_u) this->blocks.back().a_u = a_u;
-            if (this->blocks.back().a_l < a_l) this->blocks.back().a_l = a_l;
-
-            this->blocks.back().t.push_back(t);
-        }
-    };
-
-    struct A_Block {
-
-        struct Block {
-            float b;
-            long t;
-
-            Block(float b, long t) {
-                this->b = b;
-                this->t = t;
-            }
-        };
-
-        float a_u;
-        float a_l;
-        std::vector<Block> blocks;
-
-        A_Block() {
-            this->a_u = INFINITY;
-            this->a_l = -INFINITY;
-        }
-
-        A_Block(float b, float a_u, float a_l, long t) {
-            this->a_u = a_u;
-            this->a_l = a_l;
-
-            this->blocks.push_back(Block(b, t));
-        }
-
-        bool is_intersect(float a_u, float a_l) {
-            return a_l <= this->a_u && a_u >= this->a_l;
-        } 
-
-        void intersect(float b, float a_u, float a_l, long t) {
-            if (this->a_u > a_u) this->a_u = a_u;
-            if (this->a_l < a_l) this->a_l = a_l;
-
-            this->blocks.push_back(Block(b, t));
-        }
-    };
-
-    struct R_Block {
-        float a_u;
-        float a_l;
-        float b;
-        long t;
-
-        R_Block(float b, float a_u, float a_l, long t) {
-            this->b = b;
-            this->a_u = a_u;
-            this->a_l = a_l;
-            this->t = t;
-        }
-
-        float a() {
-            return (a_u + a_l) / 2;
-        }
-    };
-
-    Clock clock;
-
-    void __yield(BinObj* obj, std::vector<B_Block> b_blocks) {
-        obj->put((int) b_blocks.size());
-        for (B_Block b_block : b_blocks) {
-            float b = b_block.b;
-            obj->put(b);
-            obj->put((int) b_block.blocks.size());
-
-            for (B_Block::Block block : b_block.blocks) {
+    void Compression::__serializeBblock(BinObj* obj) {
+        obj->put((int) this->BBlocks.size());
+        for (BBlock& BBlock : this->BBlocks) {
+            BBlock.sort();
+            float b = BBlock.b;
+            obj->put((float) b);
+            obj->put((int) BBlock.blocks.size());
+            for (BBlock::Block& block : BBlock.blocks) {
                 float a = (block.a_l + block.a_u) / 2;
-                obj->put(a);
+                obj->put((float) a);
                 obj->put((int) block.t.size());
-
+                long pivot = 0;
                 for (int i=0; i<block.t.size(); i++) {
-                    obj->put(block.t[i]);
+                    long time = block.t[i];
+                    obj->put(VariableByteEncoding::encode(time - pivot));
+                    pivot = time;
                 }
             }
         }
     }
 
-    void __yield(BinObj* obj, std::vector<A_Block> a_blocks) {
-        obj->put((int) a_blocks.size());
-        for (A_Block a_block : a_blocks) {
-            float a = (a_block.a_u + a_block.a_l) / 2;
-            obj->put(a);
-            obj->put((int) a_block.blocks.size());
-
-            for (A_Block::Block block : a_block.blocks) {
-                obj->put(block.b);
-                obj->put(block.t);
+    void Compression::__serializeAblock(BinObj* obj) {
+        obj->put((int) this->ABlocks.size());
+        for (ABlock& ABlock : ABlocks) {
+            ABlock.sort();
+            float a = (ABlock.a_u + ABlock.a_l) / 2;
+            obj->put((float) a);
+            obj->put((int) ABlock.blocks.size());
+            long pivot = 0;
+            for (ABlock::Block& block : ABlock.blocks) {
+                obj->put((float) block.b);
+                obj->put(VariableByteEncoding::encode(block.t - pivot));
+                pivot = block.t;
             }
         }
     }
 
-    void __yield(BinObj* obj, std::vector<R_Block> r_blocks) {
-        obj->put((int) r_blocks.size());
-        for (R_Block block : r_blocks) {
-            obj->put(block.a());
-            obj->put(block.b);
-            obj->put(block.t);
+    void Compression::__serializeRblock(BinObj* obj) {
+        std::sort(this->r_blocks.begin(), this->r_blocks.end(), 
+            [](const Segment& a, const Segment& b)
+            { return a.t < b.t; });
+        
+        obj->put((int) this->r_blocks.size());
+        long pivot = 0;
+        for (Segment& block : this->r_blocks) {
+            obj->put((float) ((block.aMax + block.aMin) / 2));
+            obj->put((float) block.b);
+            obj->put(VariableByteEncoding::encode(block.t - pivot));
+            pivot = block.t;
         }
     }
 
-    void __group(BinObj* compress_data, std::map<float, std::vector<Interval>>& b_intervals) {
-        std::vector<B_Block> b_blocks;
-        std::vector<A_Block> a_blocks;
-        std::vector<R_Block> r_blocks;
+    BinObj* Compression::serialize() {
+        BinObj* obj = new BinObj;        
+        this->__serializeBblock(obj);
+        this->__serializeAblock(obj);
+        this->__serializeRblock(obj);
 
-        std::vector<std::pair<float, Interval>> ungrouped;
-        for (auto it = b_intervals.begin(); it != b_intervals.end(); it++) {
-            float b = it->first;
+        return obj;
+    }
+
+    void Compression::__group() {
+        std::vector<Segment> ungrouped;
+        
+        for (auto it = this->intervals.begin(); it != this->intervals.end(); it++) {
+            double b = it->first;
             
-            std::vector<Interval> intervals = it->second;
-            std::sort(intervals.begin(), intervals.end(), 
-                [](const Interval& a, const Interval& b){ return a.a_l < b.a_l; });
+            std::vector<Segment> segments = it->second;
+            std::sort(segments.begin(), segments.end(), 
+                [](const Segment& a, const Segment& b){ return a.aMin < b.aMin; });
 
-            B_Block group(b);
-            for (Interval& interval : intervals) {
-                if (group.is_intersect(interval.a_u, interval.a_l)) {
-                    group.intersect(interval.a_u, interval.a_l, interval.t);
+            BBlock group(b);
+            for (Segment& segment : segments) {
+                if (group.is_intersect(segment.aMax, segment.aMin)) {
+                    group.intersect(segment.aMax, segment.aMin, segment.t);
                 }
                 else if (group.blocks.back().t.size() > 1) {
-                    b_blocks.push_back(group);
-                    group = B_Block(b, interval.a_u, interval.a_l, interval.t);
+                    group.push_back(segment.aMax, segment.aMin, segment.t);
                 }
                 else {
-                    ungrouped.push_back(std::make_pair(b, Interval(
-                        group.blocks[0].a_u, group.blocks[0].a_l, group.blocks[0].t[0])
-                    ));
-                    group = B_Block(b, interval.a_u, interval.a_l, interval.t);
+                    ungrouped.push_back(group.pop_back());
+                    group.push_back(segment.aMax, segment.aMin, segment.t);
                 }
             }
 
-            if (group.blocks.back().t.size() > 1) {
-                b_blocks.push_back(group);
+            if (group.blocks.back().t.size() <= 1) {
+                ungrouped.push_back(group.pop_back());
             }
-            else {
-                ungrouped.push_back(std::make_pair(b, Interval(
-                    group.blocks.back().a_u, group.blocks.back().a_l, group.blocks.back().t[0]))
-                );
-            }
+            
+            if (group.blocks.size() > 0) this->BBlocks.push_back(group);
         }
 
         std::sort(ungrouped.begin(), ungrouped.end(), 
-            [](const std::pair<float, Interval>& a, const std::pair<float, Interval>& b)
-            { return a.second.a_l < b.second.a_l; });
+            [](const Segment& a, const Segment& b)
+            { return a.aMin < b.aMin; });
 
-        A_Block group;
-        for (std::pair<float, Interval>& entry : ungrouped) {
-            if (group.is_intersect(entry.second.a_u, entry.second.a_l)) {
-                group.intersect(entry.first, entry.second.a_u, entry.second.a_l, entry.second.t);
+        ABlock group;
+        for (Segment& segment : ungrouped) {
+            if (group.is_intersect(segment.aMax, segment.aMin)) {
+                group.intersect(segment.b, segment.aMax, segment.aMin, segment.t);
             }
             else if (group.blocks.size() > 1) {
-                a_blocks.push_back(group);
-                group = A_Block(entry.first, entry.second.a_u, entry.second.a_l, entry.second.t); 
+                this->ABlocks.push_back(group);
+                group = ABlock(segment.b, segment.aMax, segment.aMin, segment.t); 
             }
             else {
-                r_blocks.push_back(R_Block(group.blocks[0].b, group.a_u, group.a_l, group.blocks[0].t));
-                group = A_Block(entry.first, entry.second.a_u, entry.second.a_l, entry.second.t); 
+                this->r_blocks.push_back(Segment(group.blocks[0].t, group.a_l, group.a_u, group.blocks[0].b));
+                group = ABlock(segment.b, segment.aMax, segment.aMin, segment.t); 
             }
         }
 
         if (group.blocks.size() > 1) {
-            a_blocks.push_back(group);
+            this->ABlocks.push_back(group);
         }
         else {
-            r_blocks.push_back(R_Block(group.blocks[0].b, group.a_u, group.a_l, group.blocks[0].t));
+            this->r_blocks.push_back(Segment(
+                group.blocks[0].t, group.a_l, group.a_u, group.blocks[0].b));
         }
 
-        __yield(compress_data, b_blocks);
-        __yield(compress_data, a_blocks);
-        __yield(compress_data, r_blocks);
+        this->yield();
+        this->BBlocks.clear();
+        this->ABlocks.clear();
+        this->r_blocks.clear();
     }
-    
-    void compress(TimeSeries& timeseries, int n_segment, float bound, std::string output) {
-        clock.start();
-        IterIO outputFile(output, false);
-        BinObj* compress_data = new BinObj;
 
-        Univariate* d = (Univariate*) timeseries.next();
-        compress_data->put(d->get_time());
-        float b_1 = floor(d->get_value() / bound) * bound;
-        float b_2 = ceil(d->get_value() / bound) * bound;
-        
-        long index = 1; long length = 1; int count = 0;
-        int flag = 0; bool floor_flag = true; bool ceil_flag = true;
-        float slp_u_1 = INFINITY; float slp_u_2 = INFINITY;
-        float slp_l_1 = -INFINITY; float slp_l_2 = -INFINITY;
-        
-        std::map<float, std::vector<Interval>> b_intervals;
-        while (timeseries.hasNext()) {
-            Point2D p(length, ((Univariate*) timeseries.next())->get_value());
+    void Compression::compress(Univariate* data) {
+        Point2D p(this->index++, data->get_value());
 
-            if (p.y > slp_u_1*(p.x)+b_1+bound || p.y < slp_l_1*(p.x)+b_1-bound) {
-                floor_flag = false;
+        if (this->index == 1) {
+            this->t_s = p.x;
+            this->b_1 = std::floor(p.y / this->error) * this->error;
+            this->b_2 = std::ceil(p.y / this->error) * this->error;
+        }
+        else {
+            if (p.y > this->slp_u_1 * (p.x - this->t_s) + this->b_1 + this->error || 
+                p.y < this->slp_l_1 * (p.x - this->t_s) + this->b_1 - this->error) {
+                this->floor_flag = false;
             }
-            if (p.y > slp_u_2*(p.x)+b_2+bound || p.y < slp_l_2*(p.x)+b_2-bound) {
-                ceil_flag = false;
+            if (p.y > this->slp_u_2 * (p.x - this->t_s) + this->b_2 + this->error || 
+                p.y < this->slp_l_2 * (p.x - this->t_s) + this->b_2 - this->error) {
+                this->ceil_flag = false;
             }
-            if (floor_flag) flag++;
-            if (ceil_flag) flag--;
 
-            if (!floor_flag && !ceil_flag) {
-                if (flag > 0) {
-                    std::vector<Interval> vec = b_intervals[b_1];
-                    vec.push_back(Interval(slp_u_1, slp_l_1, index-1));
-                    b_intervals[b_1] = vec;
+            if (this->floor_flag) this->flag++;
+            if (this->ceil_flag) this->flag--;
+
+            if (!this->floor_flag && !this->ceil_flag) {
+                if (this->flag > 0) {
+                    this->intervals[this->b_1].push_back(Segment(p.x - 1, this->slp_l_1, this->slp_u_1, this->b_1));
                 }
                 else {
-                    std::vector<Interval> vec = b_intervals[b_2];
-                    vec.push_back(Interval(slp_u_2, slp_l_2, index-1));
-                    b_intervals[b_2] = vec;
+                    this->intervals[this->b_2].push_back(Segment(p.x - 1, this->slp_l_2, this->slp_u_2, this->b_2));
                 }
 
-                count++;
-                length = 0; flag = 0;
-                floor_flag = true; ceil_flag = true;
-                
-                p.x = 0;
-                b_1 = floor(p.y / bound) * bound;
-                b_2 = ceil(p.y / bound) * bound;
-                slp_u_1 = INFINITY; slp_u_2 = INFINITY;
-                slp_l_1 = -INFINITY; slp_l_2 = -INFINITY;
+                this->flag = 0;
+                this->floor_flag = true; 
+                this->ceil_flag = true;
+                this->curr_segment++;
+
+                this->t_s = p.x;
+                this->b_1 = std::floor(p.y / this->error) * this->error;
+                this->b_2 = std::ceil(p.y / this->error) * this->error;
+                this->slp_u_1 = INFINITY; this->slp_u_2 = INFINITY;
+                this->slp_l_1 = -INFINITY; this->slp_l_2 = -INFINITY;
             }
 
-            if (p.y < slp_u_1 * p.x + b_1 - bound) {
-                slp_u_1 = (p.y + bound - b_1) / p.x;
+            if (p.y < this->slp_u_1 * (p.x - this->t_s) + this->b_1 - this->error) {
+                this->slp_u_1 = (p.y + this->error - this->b_1) / (p.x - this->t_s);
             }
-            if (p.y > slp_l_1 * p.x + b_1 + bound) {
-                slp_l_1 = (p.y - bound - b_1) / p.x;
+            if (p.y > this->slp_l_1 * (p.x - this->t_s) + this->b_1 + this->error) {
+                this->slp_l_1 = (p.y - this->error - this->b_1) / (p.x - this->t_s);
             }
-            if (p.y < slp_u_2 * p.x + b_2 - bound) {
-                slp_u_2 = (p.y + bound - b_2) / p.x;
+            if (p.y < this->slp_u_2 * (p.x - this->t_s) + this->b_2 - this->error) {
+                this->slp_u_2 = (p.y + this->error - this->b_2) / (p.x - this->t_s);
             }
-            if (p.y > slp_l_2 * p.x + b_2 + bound) {
-                slp_l_2 = (p.y - bound - b_2) / p.x;
+            if (p.y > this->slp_l_2 * (p.x - this->t_s) + this->b_2 + this->error) {
+                this->slp_l_2 = (p.y - this->error - this->b_2) / (p.x - this->t_s);
             }
 
-            if (count == n_segment) {
-                count = 0; index = 0;
-                __group(compress_data, b_intervals);
-                b_intervals.clear();
+            if (this->curr_segment == this->n_segment) {
+                this->curr_segment = 0;
+                this->__group();
+                this->intervals.clear();
+            }
+        }                
+    }
+    // End: compression
+
+    // Begin: decompression
+    void Decompression::initialize() {
+        // Do nothing
+    }
+
+    void Decompression::finalize() {
+
+    }
+
+    std::pair<CSVObj*, CSVObj*> Decompression::__decompress_segment(Segment& segment) {
+        CSVObj* base_obj = nullptr;
+        CSVObj* prev_obj = nullptr;
+
+        Point2D p(this->start, segment.b);
+        Line line = Line::line(segment.a, p);
+        
+        while (this->start <= segment.t) {
+            if (base_obj == nullptr) {
+                base_obj = new CSVObj;
+                base_obj->pushData(std::to_string(this->basetime + this->interval * start));
+                base_obj->pushData(std::to_string(start * line.get_slope() + line.get_intercept()));
+
+                prev_obj = base_obj;
+            }
+            else {
+                CSVObj* obj = new CSVObj;
+                obj->pushData(std::to_string(this->basetime + this->interval * start));
+                obj->pushData(std::to_string(start * line.get_slope() + line.get_intercept()));
+
+                prev_obj->setNext(obj);
+                prev_obj = obj;
+            }
+
+            this->start++;
+        }
+
+        return std::make_pair(base_obj, prev_obj);
+    }
+
+    CSVObj* Decompression::decompress() {
+        CSVObj* base_obj = nullptr;
+        CSVObj* prev_obj = nullptr;
+        std::vector<Segment> segments;
+
+        // Decompress part 1
+        int BBlocks = this->compress_data->getInt();
+        while (BBlocks-- > 0) {
+            float b = this->compress_data->getFloat();
+            int ABlocks = this->compress_data->getInt();
+            while (ABlocks-- > 0) {
+                float a = this->compress_data->getFloat();
+                int blocks = this->compress_data->getInt();
+                long pivot = 0;
+                while (blocks-- > 0) {
+                    long time = pivot + VariableByteEncoding::decode(this->compress_data);
+                    segments.push_back(Segment(time, a, b));
+                    pivot = time;
+                }
+            }
+        }
+
+        // Decompress part 2
+        int ABlocks = this->compress_data->getInt();
+        while (ABlocks-- > 0) {
+            float a = this->compress_data->getFloat();
+            int blocks = this->compress_data->getInt();
+            long pivot = 0;
+            while (blocks-- > 0) {
+                float b = this->compress_data->getFloat();
+                long time = pivot + VariableByteEncoding::decode(this->compress_data);
+                segments.push_back(Segment(time, a, b));
+                pivot = time;
+            }
+        }
+
+        // Decompress part 3
+        int r_blocks = this->compress_data->getInt();
+        long pivot = 0;
+        while (r_blocks-- > 0) {
+            float a = this->compress_data->getFloat();
+            float b = this->compress_data->getFloat();
+            long time = pivot + VariableByteEncoding::decode(this->compress_data);
+            segments.push_back(Segment(time, a, b));
+            pivot = time;
+        }
+
+        // Decompress segments
+        std::sort(segments.begin(), segments.end(), 
+            [](const Segment& a, const Segment& b) { return a.t < b.t; });
+
+
+        for (Segment& segment : segments) {
+            std::pair<CSVObj*, CSVObj*> head_tail = __decompress_segment(segment);
+            if (base_obj == nullptr) {
+                base_obj = head_tail.first;
+            }
+            else {
+                prev_obj->setNext(head_tail.first);
             }
             
-            index++;
-            length++;
+            prev_obj = head_tail.second;
         }
 
-        if (flag > 0) {
-            std::vector<Interval> vec = b_intervals[b_1];
-            vec.push_back(Interval(slp_u_1, slp_l_1, index));
-            b_intervals[b_1] = vec;
-        }
-        else {
-            std::vector<Interval> vec = b_intervals[b_2];
-            vec.push_back(Interval(slp_u_2, slp_l_2, index));
-            b_intervals[b_2] = vec;
-        }
-
-        __group(compress_data, b_intervals);
-        b_intervals.clear();        
-
-        outputFile.writeBin(compress_data);
-        outputFile.close();
-        delete compress_data;
-
-        clock.tick();
-        double avg_time = clock.getAvgDuration() / timeseries.size();
-
-        // Profile average latency
-        std::cout << std::fixed << "Time taken for each data point (ns): " << avg_time << "\n";
-        IterIO timeFile(output+".time", false);
-        timeFile.write("Time taken for each data point (ns): " + std::to_string(avg_time));
-        timeFile.close();
+        return base_obj;
     }
-
-    struct Segment {
-        float b;
-        float a;
-        long t;
-
-        Segment(float b, float a, long t) {
-            this->b = b;
-            this->a = a;
-            this->t = t;
-        }
-    };
-
-    void __decompress_segment(IterIO& file, int interval, time_t basetime, long start, Segment& segment) {                
-        int i = 0;
-        while (start++ <= segment.t) {
-            CSVObj obj;
-            obj.pushData(std::to_string(basetime + interval * start));
-            obj.pushData(std::to_string(i++ * segment.a + segment.b));
-            file.write(&obj);
-        }
-    }
-
-    void decompress(std::string input, std::string output, int interval) {
-        IterIO inputFile(input, true, true);
-        IterIO outputFile(output, false);
-        BinObj* compress_data = inputFile.readBin();
-
-        time_t basetime = compress_data->getLong();        
-        std::vector<Segment> segments;
-        clock.start();
-        while (compress_data->getSize() != 0) {
-            long start = 0;
-
-            // Decompress part 1
-            int b_blocks = compress_data->getInt();
-            while (b_blocks-- > 0) {
-                float b = compress_data->getFloat();
-                int a_blocks = compress_data->getInt();
-                while (a_blocks-- > 0) {
-                    float a = compress_data->getFloat();
-                    int blocks = compress_data->getInt();
-                    while (blocks-- > 0) {
-                        long time = compress_data->getLong();
-                        segments.push_back(Segment(b, a, time));
-                    }
-                }
-            }
-
-            // Decompress part 2
-            int a_blocks = compress_data->getInt();
-            while (a_blocks-- > 0) {
-                float a = compress_data->getFloat();
-                int blocks = compress_data->getInt();
-                while (blocks-- > 0) {
-                    float b = compress_data->getFloat();
-                    long time = compress_data->getLong();
-                    segments.push_back(Segment(b, a, time));
-                }
-            }
-
-            // Decompress part 3
-            int blocks = compress_data->getInt();
-            while (blocks-- > 0) {
-                float a = compress_data->getFloat();
-                float b = compress_data->getFloat();
-                long time = compress_data->getLong();
-                segments.push_back(Segment(b, a, time));
-            }
-
-            // Decompress segments
-            std::sort(segments.begin(), segments.end(), 
-                [](const Segment& a, const Segment& b) { return a.t < b.t; });
-
-            for (Segment& segment : segments) {
-                __decompress_segment(outputFile, interval, basetime, start, segment);
-                start = segment.t + 1;
-            }
-
-            clock.tick();
-        }
-
-        delete compress_data;
-        inputFile.close();
-        outputFile.close();
-
-        // Profile average latency
-        std::cout << std::fixed << "Time taken for each segment (ns): " << clock.getAvgDuration() << "\n";
-        IterIO timeFile(output+".time", false);
-        timeFile.write("Time taken for each segment (ns): " + std::to_string(clock.getAvgDuration()));
-        timeFile.close();
-    }
-
+    // End: decompression
 };

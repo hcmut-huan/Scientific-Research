@@ -51,8 +51,8 @@ cat .statistic | while read line; do
     echo -n ,$(echo $line | awk -F ":" '{print $2}' | xargs) >> out/experiments.csv 
 done
 
-echo -n ,$(cat $COMPRESS.time | awk -F ":" '{print $2}' | xargs) >> out/experiments.csv
-echo ,$(cat $DECOMPRESS.time | awk -F ":" '{print $2}' | xargs) >> out/experiments.csv
+echo -n ,$(cat $COMPRESS.time | grep -oE '[0-9]+\.[0-9]+|[0-9]+' | paste -sd, -) >> out/experiments.csv
+echo ,$(cat $DECOMPRESS.time | grep -oE '[0-9]+\.[0-9]+|[0-9]+' | paste -sd, -) >> out/experiments.csv
 rm -f .statistic
 
 exit 0

@@ -49,7 +49,7 @@ def load_monitor(compress, decompress):
             d_max_vsz = d_max_vsz if d_max_vsz > d_vsz else d_vsz
             d_max_rss = d_max_rss if d_max_rss > d_rss else d_rss
         
-    return c_max_vsz, c_max_rss, d_max_vsz, d_max_vsz
+    return c_max_vsz, c_max_rss, d_max_vsz, d_max_rss
 
 
 def rmse(origin_data, approx_data):
@@ -66,7 +66,7 @@ def mae(origin_data, approx_data):
 
 def maxdiff(origin_data, approx_data):
     index = np.argmax(np.abs(origin_data - approx_data))
-    return np.max(np.abs(origin_data - approx_data)) , index, origin_data[index], approx_data[index]
+    return np.max(np.abs(origin_data - approx_data)) # , index, origin_data[index], approx_data[index]
 
 
 def mindiff(origin_data, approx_data):
@@ -85,11 +85,14 @@ if __name__ == "__main__":
     D_MONITOR = DECOMPRESS + ".mon"
     
     origin_data, approx_data = load(DATA, DECOMPRESS)
-    c_max_vsz, c_max_rss, d_max_vsz, d_max_vsz = load_monitor(C_MONITOR, D_MONITOR)
+    c_max_vsz, c_max_rss, d_max_vsz, d_max_rss = load_monitor(C_MONITOR, D_MONITOR)
     count_min = min(origin_data.shape[0], approx_data.shape[0])
     
     origin_data = origin_data[:count_min]
     approx_data = approx_data[:count_min]
+    
+    
+    # print(compressratio(DATA, COMPRESS), rmse(origin_data, approx_data), maxdiff(origin_data, approx_data)(0), c_max_vsz/1024/1024, c_max_rss/1024/1024, d_max_vsz/1024/1024,)
     
     print("Compress Ratio:", compressratio(DATA, COMPRESS))
     print("MSE:", mse(origin_data, approx_data))
@@ -100,4 +103,4 @@ if __name__ == "__main__":
     print("c_max_vsz:", c_max_vsz/1024/1024)
     print("c_max_rss:", c_max_rss/1024/1024)
     print("d_max_vsz:", d_max_vsz/1024/1024)
-    print("d_max_rss:", d_max_vsz/1024/1024)
+    print("d_max_rss:", d_max_rss/1024/1024)

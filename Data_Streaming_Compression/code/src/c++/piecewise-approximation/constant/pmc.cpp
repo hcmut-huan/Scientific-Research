@@ -1,141 +1,109 @@
 #include "piecewise-approximation/constant.hpp"
 
 namespace PMC {
+    // Begin: compression
+    void Compression::__mean(Univariate* data) {
+        Point2D p(this->index++, data->get_value());   
+        float n_value = (value * length + p.y) / (length + 1);
+        this->min = this->min < p.y ? this->min : p.y;
+        this->max = this->max > p.y ? this->max : p.y;
+    
+        if (this->max - n_value > this->error || n_value - this->min > this->error) {
+            this->yield();
+            this->prev_end = this->curr_end;
 
-    Clock clock;
+            this->min = p.y;
+            this->max = p.y;
+            this->value = p.y;
+            length = 1;
+        }
+        else {
+            value = n_value;
+            length++;
+        }
 
-    void __yield(BinObj* obj, short length, float value) {
-        obj->put(length);
-        obj->put(value);
+        this->curr_end = p.x;
     }
 
-    BinObj* __midrange(TimeSeries& timeseries, float bound) {
-        BinObj* obj = new BinObj;
-
-        Univariate* d = (Univariate*) timeseries.next();
-        obj->put(d->get_time());
-        float min = d->get_value();
-        float max = d->get_value();
-        float value = d->get_value();
-
-        unsigned short length = 1;
-
-        clock.start();    
-        while (timeseries.hasNext()) {
-            Univariate* data = (Univariate*) timeseries.next();
-
-            min = min < data->get_value() ? min : data->get_value();
-            max = max > data->get_value() ? max : data->get_value();
+    void Compression::__midrange(Univariate* data) {
+        Point2D p(this->index++, data->get_value());        
+        this->min = this->min < p.y ? this->min : p.y;
+        this->max = this->max > p.y ? this->max : p.y;
             
-            if (length > 65000 || max - min > 2 * bound) {
-                __yield(obj, length, value);
-                min = data->get_value();
-                max = data->get_value();
-                value = data->get_value();
-                length = 1;
-            }
-            else {
-                value = (max + min) / 2;
-                length++;
-            }
+        if (this->max - this->min > 2 * this->error) {
+            this->yield();
+            this->prev_end = this->curr_end;
+
+            this->min = p.y;
+            this->max = p.y;
+            this->value = p.y;
+        }
+        else {
+            this->value = (this->max + this->min) / 2;
         }
 
-        return obj;
+        this->curr_end = p.x;
     }
 
-    BinObj* __mean(TimeSeries& timeseries, float bound) {
+    void Compression::initialize(int count, char** params) {
+        this->error = atof(params[0]);
+        this->mode = params[1];
+    }
+
+    void Compression::finalize() {
+        this->yield();
+    }
+
+    void Compression::compress(Univariate* data) {
+        if (this->mode == "midrange") this->__midrange(data);
+        else if (this->mode == "mean") this->__mean(data);
+    }
+
+    BinObj* Compression::serialize() {
         BinObj* obj = new BinObj;
-
-        Univariate* d = (Univariate*) timeseries.next();
-        obj->put(d->get_time());
-        float min = d->get_value();
-        float max = d->get_value();
-        float value = d->get_value();
-        
-        unsigned short length = 1;
-        clock.start();
-        while (timeseries.hasNext()) {
-            Univariate* data = (Univariate*) timeseries.next();
-            float n_value = (value * length + data->get_value()) / (length+1);
-
-            min = min < data->get_value() ? min : data->get_value();
-            max = max > data->get_value() ? max : data->get_value();
-        
-            if (length > 65000 || max - n_value > bound || n_value - min > bound) {
-                __yield(obj, length, value);
-                min = data->get_value();
-                max = data->get_value();
-                value = data->get_value();
-                length = 1;
-            }
-            else {
-                value = n_value;
-                length++;
-            }
-        }
+        obj->put((short)(this->curr_end - this->prev_end));
+        obj->put((float) this->value);
 
         return obj;
     }
+    // End: compression
 
-    void compress(TimeSeries& timeseries, std::string mode, float bound, std::string output) {
-        clock.start();
-        BinObj* compress_data = nullptr;
-        IterIO outputFile(output, false);
-
-        if (mode == "midrange") {
-            compress_data = __midrange(timeseries, bound);    
-        }
-        else if (mode == "mean") {
-            compress_data = __mean(timeseries, bound);
-        }
-
-        outputFile.writeBin(compress_data);
-        outputFile.close();
-        delete compress_data;
-
-        clock.tick();
-        double avg_time = clock.getAvgDuration() / timeseries.size();
-
-        // Profile average latency
-        std::cout << std::fixed << "Time taken for each data point (ns): " << avg_time << "\n";
-        IterIO timeFile(output+".time", false);
-        timeFile.write("Time taken for each data point (ns): " + std::to_string(avg_time));
-        timeFile.close();
+    // Begin: decompression
+    void Decompression::initialize() {
+        // Do nothing
     }
 
-    void __decompress_segment(IterIO& file, int interval, time_t basetime, int length, float value) {
-        for (int i=0; i<length; i++) {
-            CSVObj obj;
-            obj.pushData(std::to_string(basetime + i * interval));
-            obj.pushData(std::to_string(value));
-            file.write(&obj);
-        }
+    void Decompression::finalize() {
+        // Do nothing
     }
 
-    void decompress(std::string input, std::string output, int interval) {
-        IterIO inputFile(input, true, true);
-        IterIO outputFile(output, false);
-        BinObj* compress_data = inputFile.readBin();
+    CSVObj* Decompression::decompress() {
+        CSVObj* base_obj = nullptr;
+        CSVObj* prev_obj = nullptr;
 
-        time_t basetime = compress_data->getLong();
-        clock.start();
-        while (compress_data->getSize() != 0) {
-            unsigned short length = compress_data->getShort();
-            float value = compress_data->getFloat();
-            __decompress_segment(outputFile, interval, basetime, length, value);
+        unsigned short length = this->compress_data->getShort();
+        float value = this->compress_data->getFloat();
 
-            basetime += interval * length;
-            clock.tick();
+        for (int i=this->index + 1; i<=this->index + length; i++) {
+            if (base_obj == nullptr) {
+                base_obj = new CSVObj;
+                base_obj->pushData(std::to_string(this->basetime + i * this->interval));
+                base_obj->pushData(std::to_string(value));
+
+                prev_obj = base_obj;
+            }
+            else {
+                CSVObj* obj = new CSVObj;
+                obj->pushData(std::to_string(this->basetime + i * this->interval));
+                obj->pushData(std::to_string(value));
+
+                prev_obj->setNext(obj);
+                prev_obj = obj;
+            }
         }
 
-        delete compress_data;
-        inputFile.close();
-        outputFile.close();
-
-        // Profile average latency
-        std::cout << std::fixed << "Time taken for each segment (ns): " << clock.getAvgDuration() << "\n";
-        IterIO timeFile(output+".time", false);
-        timeFile.write("Time taken for each segment (ns): " + std::to_string(clock.getAvgDuration()));
-        timeFile.close();
+        this->index += length;
+        return base_obj;
     }
+    // End: decompression
 };

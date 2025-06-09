@@ -1,17 +1,55 @@
-#include <map>
-#include <iostream>
-#include <eigen/Eigen>
-
-#include "system/io.hpp"
-#include "system/monitor.hpp"
-#include "algebraic/function.hpp"
-#include "algebraic/matrix.hpp"
-#include "timeseries.hpp"
+#include "base-c.hpp"
+#include "base-d.hpp"
 
 
 namespace NormalEquation {
     // Source paper: Fast Piecewise Polynomial Fitting of Time-Series Data for Streaming Computing
     // Source path: src/piecewise-approximation/polynomial/normal-equation.cpp
-    void compress(TimeSeries& timeseries, std::string mode, int degree, float bound, std::string output);
-    void decompress(std::string input, std::string output, int interval);
+    
+    struct Model {
+        int length = 0;
+        float error = -1;
+        Polynomial* function = nullptr;
+
+        Model(Polynomial* function);
+        ~Model();
+    };
+
+    class Compression : public BaseCompression {
+        private:
+            int degree = -1;
+            double error = 0;
+            std::string mode = "";
+
+            Model* model = nullptr;
+            std::vector<Point2D> window;
+
+            // std::map<int, Matrix<double>*> cache;    // Use our matrix implementation
+            std::map<int, Eigen::MatrixXd> cache;       // Use eigen library
+            
+            Polynomial* __calPolynomial();
+            bool __approxSuccess(Model* model);
+
+        protected:
+            void compress(Univariate* data) override;
+            BinObj* serialize() override;
+
+        public:
+            Compression(std::string output) : BaseCompression(output) {}            
+            void initialize(int count, char** params) override;
+            void finalize() override;
+    };
+
+    class Decompression : public BaseDecompression {
+        private:
+            int degree = 0;
+
+        protected:
+            CSVObj* decompress() override;
+        
+        public:
+            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {} 
+            void initialize() override;
+            void finalize() override;
+    };
 };

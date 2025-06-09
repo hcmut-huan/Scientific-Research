@@ -9,10 +9,10 @@ class Data {};
 class Univariate : public Data {
     private:
         std::time_t time;
-        float value;
+        double value;
     
     public:
-        Univariate(std::time_t time, float val) {
+        Univariate(std::time_t time, double val) {
             this->time = time;
             this->value = val;
         }
@@ -25,7 +25,7 @@ class Univariate : public Data {
             return std::localtime(&this->time);
         }
 
-        float get_value() const {
+        double get_value() const {
             return this->value;
         }
 };
@@ -38,6 +38,10 @@ class TimeSeries {
     public:
         void push(Data* data) {
             this->series.push_back(data);
+        }
+
+        Data* get(int i) {
+            return this->series.at(i);
         }
 
         Data* next() {

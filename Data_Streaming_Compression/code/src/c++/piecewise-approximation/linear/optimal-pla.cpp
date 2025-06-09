@@ -1,139 +1,210 @@
 #include "piecewise-approximation/linear.hpp"
 
 namespace OptimalPLA {
-    
-    Clock clock;
 
-    void __yield(BinObj* obj, short length, float slope, float intercept) {
-        obj->put(length);
-        obj->put(slope);
-        obj->put(intercept);
+    // Begin: compression
+    void Compression::initialize(int count, char** params) {
+        this->error = atof(params[0]);
     }
 
-    void compress(TimeSeries& timeseries, float bound, std::string output) {
-        clock.start();
-        IterIO outputFile(output, false);
-        BinObj* compress_data = new BinObj;
-
-        Line u_line(0, 0); Line l_line(0, 0);
-        UpperHull u_cvx; LowerHull l_cvx;
-
-        Univariate* d = (Univariate*) timeseries.next();
-        compress_data->put(d->get_time());
-        Point2D p1(0, d->get_value());
-        u_cvx.append(Point2D(0, p1.y-bound));
-        l_cvx.append(Point2D(0, p1.y+bound));
+    void Compression::finalize() {
+        if (this->length >= 2) this->yield();
         
-        unsigned short length = 1;
-        while (timeseries.hasNext()) {
-            Point2D p(length, ((Univariate*) timeseries.next())->get_value());
+        if (this->pivot != nullptr) delete this->pivot;
+        if (this->u_line != nullptr) delete this->u_line;
+        if (this->l_line != nullptr) delete this->l_line;
+        this->u_cvx.clear();
+        this->l_cvx.clear();
+    }
 
-            if (length == 1) {
-                u_line = Line::line(Point2D(p1.x, p1.y-bound), Point2D(1, p.y+bound));
-                l_line = Line::line(Point2D(p1.x, p1.y+bound), Point2D(1, p.y-bound));
-                u_cvx.append(Point2D(1, p.y-bound));
-                l_cvx.append(Point2D(1, p.y+bound));
+    BinObj* Compression::serialize() {
+        BinObj* obj = new BinObj;
+        Point2D p = Line::intersection(*this->u_line, *this->l_line);
+
+        float slope = (this->u_line->get_slope() + this->l_line->get_slope()) / 2;
+        float intercept = (this->u_line->get_intercept() + this->l_line->get_intercept()) / 2;
+        Line line = Line::line(slope, p);
+        // short embedded = this->length | (0 << 15);
+
+        obj->put((short) this->length);
+        obj->put((float) slope);
+        obj->put((float) intercept);
+        
+        // float x1 = - this->u_line->get_intercept() / this->u_line->get_slope();
+        // float x2 = - this->l_line->get_intercept() / this->l_line->get_slope();
+
+        // int index = 0;
+
+        // if (this->u_line->get_slope() * this->l_line->get_slope() < 0) {
+        //     if (p.y >= 0) index = std::floor(x1);
+        //     else index = std::ceil(x1);
+        // }
+        // else {
+        //     index = std::floor(x1 < x2 ? x2 : x1);
+        // }
+
+        // if (std::abs(x1) > 8000 || std::abs(x2) > 8000 || index == (this->length-1) || std::abs(x2-x1) < 1) {
+        //     float slope = (this->u_line->get_slope() + this->l_line->get_slope()) / 2;
+        //     Line line = Line::line(slope, p);
+        //     short embedded = this->length | (0 << 15);
+
+        //     obj->put((short) embedded);
+        //     obj->put((float) line.get_slope());
+        //     obj->put((float) line.get_intercept());
+        // }
+        // else {
+        //     Point2D p2(index, 0);
+        //     Line line = Line::line(p2, p);
+        //     short embedded = (this->length - 1) | (1 << 15);
+
+        //     obj->put((short) embedded);
+        //     obj->put((short) index);
+        //     obj->put((float) line.subs(this->length - 1));
+        // }
+
+        return obj;
+    }
+
+    void Compression::compress(Univariate* data) {
+        Point2D p(this->length++, data->get_value());
+
+        if (this->pivot == nullptr) {
+            this->pivot = new Point2D(p.x, p.y);
+            this->u_cvx.append(Point2D(p.x, p.y - this->error));
+            this->l_cvx.append(Point2D(p.x, p.y + this->error));
+        }
+        else if (this->u_line == nullptr) {
+            Line u_line = Line::line(
+                Point2D(this->pivot->x, this->pivot->y-this->error), 
+                Point2D(p.x, p.y+this->error)
+            );
+            Line l_line = Line::line(
+                Point2D(this->pivot->x, this->pivot->y+this->error), 
+                Point2D(p.x, p.y-this->error)
+            );
+
+            this->u_line = new Line(u_line.get_slope(), u_line.get_intercept());
+            this->l_line = new Line(l_line.get_slope(), l_line.get_intercept());
+            this->u_cvx.append(Point2D(p.x, p.y - this->error));
+            this->l_cvx.append(Point2D(p.x, p.y + this->error));
+        }
+        else {
+            if (this->l_line->subs(p.x) > p.y + this->error || p.y - this->error > this->u_line->subs(p.x)) {
+                this->length--;
+                this->yield();
+                
+                delete this->pivot;
+                delete this->u_line; this->u_line = nullptr;
+                delete this->l_line; this->l_line = nullptr;
+                this->u_cvx.clear(); this->l_cvx.clear();
+
+                this->pivot = new Point2D(0, p.y);
+                u_cvx.append(Point2D(0, p.y - this->error));
+                l_cvx.append(Point2D(0, p.y + this->error));
+                this->length = 1;
             }
             else {
-                if (length > 65000 || l_line.subs(p.x) > p.y + bound || p.y - bound > u_line.subs(p.x)) {
-                    __yield(compress_data, length, (u_line.get_slope()+l_line.get_slope())/2, (u_line.get_intercept()+l_line.get_intercept())/2);
+                bool update_u = p.y + this->error < this->u_line->subs(p.x);
+                bool update_l = p.y - this->error > this->l_line->subs(p.x);
 
-                    p1 = Point2D(0, p.y);
-                    u_cvx.clear(); l_cvx.clear();
-                    u_cvx.append(Point2D(0, p1.y-bound));
-                    l_cvx.append(Point2D(0, p1.y+bound));
-                    length = 0;
-                }
-                else {
-                    bool update_u = p.y + bound < u_line.subs(p.x);
-                    bool update_l = p.y - bound > l_line.subs(p.x);
+                if (update_u) {
+                    int index = 0;
+                    double min_slp = INFINITY;
 
-                    if (update_u) {
-                        int index = 0;
-                        float min_slp = INFINITY;
+                    for (int i=0; i<this->u_cvx.size(); i++) {
+                        Line line = Line::line(this->u_cvx.at(i), Point2D(p.x, p.y + this->error));
+                        if (line.get_slope() < min_slp) {
+                            min_slp = line.get_slope();
+                            index = i;
 
-                        for (int i=0; i<u_cvx.size(); i++) {
-                            Line l = Line::line(u_cvx.at(i), Point2D(p.x, p.y+bound));
-                            if (l.get_slope() < min_slp) {
-                                min_slp = l.get_slope();
-                                index = i;
-                                u_line = Line(l.get_slope(), l.get_intercept());
-                            }
+                            delete this->u_line;
+                            this->u_line = new Line(line.get_slope(), line.get_intercept());
                         }
-                        u_cvx.erase_from_begin(index);
                     }
-                    if (update_l) {
-                        int index = 0;
-                        float max_slp = -INFINITY;
-
-                        for (int i=0; i<l_cvx.size(); i++) {
-                            Line l = Line::line(l_cvx.at(i), Point2D(p.x, p.y-bound));
-                            if (l.get_slope() > max_slp) {
-                                max_slp = l.get_slope();
-                                index = i;
-                                l_line = Line(l.get_slope(), l.get_intercept());
-                            }
-                        }
-                        l_cvx.erase_from_begin(index);
-                    }
-
-                    if (update_u) l_cvx.append(Point2D(p.x, p.y+bound));
-                    if (update_l) u_cvx.append(Point2D(p.x, p.y-bound));
+                    this->u_cvx.erase_from_begin(index);
                 }
+                if (update_l) {
+                    int index = 0;
+                    double max_slp = -INFINITY;
+
+                    for (int i=0; i<this->l_cvx.size(); i++) {
+                        Line line = Line::line(this->l_cvx.at(i), Point2D(p.x, p.y - this->error));
+                        if (line.get_slope() > max_slp) {
+                            max_slp = line.get_slope();
+                            index = i;
+
+                            delete this->l_line;
+                            this->l_line = new Line(line.get_slope(), line.get_intercept());
+                        }
+                    }
+                    this->l_cvx.erase_from_begin(index);
+                }
+
+                if (update_u) this->l_cvx.append(Point2D(p.x, p.y + this->error));
+                if (update_l) this->u_cvx.append(Point2D(p.x, p.y - this->error));
             }
-
-            length++;
         }
+    }
+    // End: compression
 
-        outputFile.writeBin(compress_data);
-        outputFile.close();
-        delete compress_data;
-
-        clock.tick();
-        double avg_time = clock.getAvgDuration() / timeseries.size();
-
-        // Profile average latency
-        std::cout << std::fixed << "Time taken for each data point (ns): " << avg_time << "\n";
-        IterIO timeFile(output+".time", false);
-        timeFile.write("Time taken for each data point (ns): " + std::to_string(avg_time));
-        timeFile.close();
+    // Begin: decompression
+    void Decompression::initialize() {
+        // Do nothing
     }
 
-    void __decompress_segment(IterIO& file, int interval, time_t basetime, int length, float slope, float intercept) {
+    void Decompression::finalize() {
+        // Do nothing
+    }
+
+    CSVObj* Decompression::decompress() {
+        CSVObj* base_obj = nullptr;
+        CSVObj* prev_obj = nullptr;
+
+        short embedded = this->compress_data->getShort();
+        bool flag = embedded >> 15;
+
+        int length = 0;
+        float slp = 0;
+        float intercept = 0;
+
+        if (!flag) {
+            length = embedded & (0xffff >> 1);
+            slp = this->compress_data->getFloat();
+            intercept = this->compress_data->getFloat();
+        }
+        else {
+            length = (embedded & (0xffff >> 1)) + 1;
+            short index = this->compress_data->getShort();
+            float value = this->compress_data->getFloat();
+
+            Point2D p1(index, 0);
+            Point2D p2(length - 1, value);
+            Line line = Line::line(p1, p2);
+
+            slp = line.get_slope();
+            intercept = line.get_intercept();
+        }
+
         for (int i=0; i<length; i++) {
-            CSVObj obj;
-            obj.pushData(std::to_string(basetime + interval * i));
-            obj.pushData(std::to_string(i * slope + intercept));
-            file.write(&obj);
-        }
-    }
+            if (base_obj == nullptr) {
+                base_obj = new CSVObj;
+                base_obj->pushData(std::to_string(this->basetime + i * this->interval));
+                base_obj->pushData(std::to_string(slp * i + intercept));
 
-    void decompress(std::string input, std::string output, int interval) {
-        IterIO inputFile(input, true, true);
-        IterIO outputFile(output, false);
-        BinObj* compress_data = inputFile.readBin();
+                prev_obj = base_obj;
+            }
+            else {
+                CSVObj* obj = new CSVObj;
+                obj->pushData(std::to_string(this->basetime + i * this->interval));
+                obj->pushData(std::to_string(slp * i + intercept));
 
-        time_t basetime = compress_data->getLong();
-        while (compress_data->getSize() != 0) {
-            clock.start();
-            unsigned short length = compress_data->getShort();
-            float slope = compress_data->getFloat();
-            float intercept = compress_data->getFloat();
-            __decompress_segment(outputFile, interval, basetime, length, slope, intercept);
-            
-            basetime += length * interval;
-            clock.tick();
+                prev_obj->setNext(obj);
+                prev_obj = obj;
+            }
         }
 
-        delete compress_data;
-        inputFile.close();
-        outputFile.close();
-
-        // Profile average latency
-        std::cout << std::fixed << "Time taken for each segment (ns): " << clock.getAvgDuration() << "\n";
-        IterIO timeFile(output+".time", false);
-        timeFile.write("Time taken for each segment (ns): " + std::to_string(clock.getAvgDuration()));
-        timeFile.close();
+        this->basetime += length * this->interval;
+        return base_obj;
     }
-    
+    // End: decompression
 };

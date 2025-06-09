@@ -5,15 +5,15 @@
 #include <cmath>
 
 struct Point2D {
-    float x;
-    float y;
+    double x;
+    double y;
 
     Point2D() {
         this->x = 0;
         this->y = 0;
     }
 
-    Point2D(float x, float y) {
+    Point2D(double x, double y) {
         this->x = x;
         this->y = y;
     }
@@ -22,41 +22,46 @@ struct Point2D {
 // Geometry function support timeseries analysis
 class Line {
     private:
-        float slope;
-        float intercept;
+        double slope;
+        double intercept;
 
     public:
-        Line(float slope, float intercept) {
+        Line() {
+            this->slope = 0;
+            this->intercept = 0;
+        }
+
+        Line(double slope, double intercept) {
             this->slope = slope;
             this->intercept = intercept;
         }
 
-        float subs(float x) {
+        double subs(double x) {
             return this->slope * x + this->intercept;
         }
 
-        float get_slope() {
+        double get_slope() {
             return this->slope;
         }
 
-        float get_intercept() {
+        double get_intercept() {
             return this->intercept;
         }
 
         static Line line(Point2D p1, Point2D p2) {
-            float slope = (p1.y - p2.y) / (float) (p1.x-p2.x);
-            float intercept = p1.y - slope*p1.x;
+            double slope = (p1.y - p2.y) / (double) (p1.x-p2.x);
+            double intercept = p1.y - slope*p1.x;
 
             return Line(slope, intercept);
         }
 
-        static Line line(float slope, Point2D p) {
+        static Line line(double slope, Point2D p) {
             return Line(slope, p.y - slope*p.x);
         }
 
         static Point2D intersection(Line l1, Line l2) {
-            float x = (l1.intercept - l2.intercept) / (l2.slope - l1.slope);
-            float y = l1.intercept + l1.slope*x;
+            double x = (l1.intercept - l2.intercept) / (l2.slope - l1.slope);
+            double y = l1.intercept + l1.slope*x;
 
             return Point2D(x, y); 
         }
@@ -67,28 +72,34 @@ class Line {
 class Polynomial {
     public:
         int degree;
-        float* coefficients;    // coefficient degree starts from 0 
+        double* coefficients;    // coefficient degree starts from 0 
 
     public:
         Polynomial(int k, const float* coeffs) {
             this->degree = k;
-            this->coefficients = new float[k+1];
+            this->coefficients = new double[k+1];
             for (int i=0; i<k+1; i++) {
-                this->coefficients[i] = coeffs[i];
+                this->coefficients[i] = (double) coeffs[i];
             }
         }
 
         Polynomial(int k, const double* coeffs) {
             this->degree = k;
-            this->coefficients = new float[k+1];
+            this->coefficients = new double[k+1];
             for (int i=0; i<k+1; i++) {
-                this->coefficients[i] = (float) coeffs[i];
+                this->coefficients[i] = coeffs[i];
             }
         }
 
         Polynomial(float coeff) {
             this->degree = 0;
-            this->coefficients = new float[1];
+            this->coefficients = new double[1];
+            this->coefficients[0] = (double) coeff;
+        }
+
+        Polynomial(double coeff) {
+            this->degree = 0;
+            this->coefficients = new double[1];
             this->coefficients[0] = coeff;
         }
 
@@ -96,8 +107,8 @@ class Polynomial {
             delete[] this->coefficients;
         }
 
-        float subs(float indeterminate) const {
-            float result = this->coefficients[0];
+        double subs(double indeterminate) const {
+            double result = this->coefficients[0];
             for (int i=1; i<this->degree+1; i++) {
                 result += this->coefficients[i]*pow(indeterminate, i);
             }
@@ -105,7 +116,7 @@ class Polynomial {
             return result;
         }
 
-        float get_coefficient(int degree) {
+        double get_coefficient(int degree) {
             return this->coefficients[degree];
         }
 

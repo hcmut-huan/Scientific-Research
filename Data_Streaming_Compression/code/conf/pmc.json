@@ -5,7 +5,7 @@
     "interval": 1,
     "algorithm": {
         "name": "pmc",
-        "error": 0.611,
-        "mode": "midrange"
+        "error": 0.6112,
+        "mode": "mean"
     }
 }

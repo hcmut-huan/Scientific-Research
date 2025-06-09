@@ -12,10 +12,10 @@ WORK_DIR="$(pwd)"
 # done
 
 cd "$WORK_DIR/bin/.o/"
-g++ -I "$WORK_DIR/include" -I "$WORK_DIR/lib" --std=c++11 -c "$WORK_DIR/src/c++/model-selection/polynomial/bounded.cpp"
+g++ -I "$WORK_DIR/include" -I "$WORK_DIR/lib" --std=c++11 -c "$WORK_DIR/src/c++/model-selection/polynomial/smart-grid-compression.cpp"
 
 cd "$WORK_DIR"/bin/
-g++ $(find $WORK_DIR/bin/.o/ -name "*.o" ! -name "compress.o" ! -name "decompress.o" -type f | xargs) "$WORK_DIR"/bin/.o/compress.o -o compress
-g++ $(find $WORK_DIR/bin/.o/ -name "*.o" ! -name "compress.o" ! -name "decompress.o" -type f | xargs) "$WORK_DIR"/bin/.o/decompress.o -o decompress
+g++ $(find $WORK_DIR/bin/.o/ -name "*.o" ! -name "main-c.o" ! -name "main-d.o" -type f | xargs) "$WORK_DIR"/bin/.o/main-c.o -o compress
+g++ $(find $WORK_DIR/bin/.o/ -name "*.o" ! -name "main-c.o" ! -name "main-d.o" -type f | xargs) "$WORK_DIR"/bin/.o/main-d.o -o decompress
 
 exit 0

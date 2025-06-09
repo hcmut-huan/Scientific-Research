@@ -15,6 +15,17 @@ class IOObj {
         virtual IOObj* getNext() = 0;
         virtual void setNext(IOObj* obj) = 0;
         virtual std::string toStr() = 0;
+
+        static void clear(IOObj* head) {
+            IOObj* curr = head;
+            IOObj* next = nullptr;
+
+            while (curr != nullptr) {
+                next = curr->getNext();
+                delete curr;
+                curr = next;
+            }
+        }
 };
 
 class BinObj : public IOObj {
@@ -32,10 +43,16 @@ class BinObj : public IOObj {
         }
 
         std::string toStr() override {
+            BinObj* curr = this;
             std::string str = "";
-            for (Byte byte : this->byte_vector) {
-                str += HEX[(byte & 0xf0) >> 4];
-                str += HEX[(byte & 0x0f) >> 0];
+            
+            while (curr != nullptr) {
+                for (Byte byte : this->byte_vector) {
+                    str += HEX[(byte & 0xf0) >> 4];
+                    str += HEX[(byte & 0x0f) >> 0];
+                }
+
+                curr = (BinObj*) curr->getNext();
             }
 
             return str;
@@ -43,6 +60,12 @@ class BinObj : public IOObj {
 
         void put(Byte data) {
             this->byte_vector.push_back(data);
+        }
+
+        void put(std::vector<Byte> data) {
+            for (Byte& byte : data) {
+                this->put(byte);
+            }
         }
 
         Byte getByte() {
@@ -210,6 +233,38 @@ class CSVObj : public IOObj {
         }
 };
 
+class VariableByteEncoding {
+    public:
+        static std::vector<Byte> encode(long number) {
+            std::vector<Byte> bytes;
+            do {
+                Byte byte = number % 128; // get last 7 bits
+                bytes.insert(bytes.begin(), byte);
+                number /= 128;
+            } while (number > 0);
+
+            // Set the continuation bit (MSB = 1) on the last byte
+            bytes.back() |= 0x80;
+
+            return bytes;
+        }
+
+        static long decode(BinObj* obj) {
+            long number = 0;
+
+            while (true) {
+                Byte byte = obj->getByte();
+                if (byte & 0x80) { // this is the last byte (MSB = 1)
+                    number = number * 128 + (byte & 0x7F);
+                    break;
+                }
+                number = number * 128 + byte;
+            }
+
+            return number;
+        }
+};
+
 class BatchIO {
     public:
         static void write(std::string filename, IOObj* obj, bool append = false) {
@@ -288,14 +343,21 @@ class IterIO {
         }
 
         void write(IOObj* obj, bool endline = true) {
-            this->file << obj->toStr();
-            if (endline) {
-                this->file << "\n";
+            while (obj != nullptr) {
+                this->file << obj->toStr();
+                if (endline) {
+                    this->file << "\n";
+                }
+
+                obj = obj->getNext();
             }
         }
 
         void writeBin(BinObj* obj) {
-            this->file.write((char*) obj->serialize(), obj->getSize());
+            while (obj != nullptr) {
+                this->file.write((char*) obj->serialize(), obj->getSize());
+                obj = (BinObj*) obj->getNext();
+            }
         }
 
         CSVObj* readCSV() {

@@ -67,32 +67,47 @@ class Monitor {
 
 class Clock {
     private:
-        int _counter;
-        high_resolution_clock::time_point _pivot;
-        double _avg_duration;  // average duration in nano second
+        int _counter = 0;
+        double _avg_duration = 0; 
+        long _max_duration = -1;
 
+        high_resolution_clock::time_point _start_pivot;
+        high_resolution_clock::time_point _tick_pivot;
+        
     public:
         void start() {
-            this->stop();
-            this->_pivot = high_resolution_clock::now();
+            this->reset();
+            this->_start_pivot = high_resolution_clock::now();
+            this->_tick_pivot = this->_start_pivot;
         }
 
-        // Stop the clock and return duration from start in nanoseconds
-        long tick() {
+        void reset() {
+            this->_counter = 0;
+            this->_avg_duration = 0;
+            this->_max_duration = -1;
+        }
+
+        void tick() {
+            high_resolution_clock::time_point curr = high_resolution_clock::now();
+            long duration = duration_cast<nanoseconds>(curr - this->_tick_pivot).count();
+
+            this->_avg_duration = ((this->_counter) * this->_avg_duration + duration) / ((double) (this->_counter + 1));
+            this->_max_duration = duration > this->_max_duration ? duration : this->_max_duration;
+
             this->_counter++;
-            long duration = duration_cast<nanoseconds>(high_resolution_clock::now() - this->_pivot).count();
-            this->_avg_duration = ((this->_counter - 1) * this->_avg_duration + duration) / (double) this->_counter;
-            
-            return duration;
+            this->_tick_pivot = curr;
         }
 
         double getAvgDuration() {
             return this->_avg_duration;
         }
 
-        void stop() {
-            this->_counter = 0;
-            this->_avg_duration = 0;
+        long getMaxDuration() {
+            return this->_max_duration;
+        }
+
+        long stop() {
+            return duration_cast<nanoseconds>(high_resolution_clock::now() - this->_start_pivot).count();
         }
 };
 

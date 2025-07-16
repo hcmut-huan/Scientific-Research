@@ -48,11 +48,23 @@ int main(int argc, char** argv) {
         compressor.initialize(argc - 4, &argv[4]);
         compressor.run(timeseries);
     }
-    // else if (ALGO == "slide-filter") {
-    //     SlideFilter::compress(timeseries, ERROR, OUTPUT);
-    // }
+    else if (ALGO == "slide-filter") {
+        SlideFilter::Compression compressor(OUTPUT);
+        compressor.initialize(argc - 4, &argv[4]);
+        compressor.run(timeseries);
+    }
     else if (ALGO == "optimal-pla") {
         OptimalPLA::Compression compressor(OUTPUT);
+        compressor.initialize(argc - 4, &argv[4]);
+        compressor.run(timeseries);
+    }
+    else if (ALGO == "semi-optimal-pla") {
+        SemiOptimalPLA::Compression compressor(OUTPUT);
+        compressor.initialize(argc - 4, &argv[4]);
+        compressor.run(timeseries);
+    }
+    else if (ALGO == "semi-mixed-pla") {
+        SemiMixedPLA::Compression compressor(OUTPUT);
         compressor.initialize(argc - 4, &argv[4]);
         compressor.run(timeseries);
     }
@@ -74,9 +86,11 @@ int main(int argc, char** argv) {
     // else if (ALGO == "unbounded") {
     //     Unbounded::compress(timeseries, ERROR, OUTPUT);
     // }
-    // else if (ALGO == "bounded") {
-    //     Bounded::compress(timeseries, atoi(argv[5]), ERROR, OUTPUT);
-    // }
+    else if (ALGO == "bounded") {
+        Bounded::Compression compressor(OUTPUT);
+        compressor.initialize(argc - 4, &argv[4]);
+        compressor.run(timeseries);
+    }
 
     timeseries.finalize();
     Monitor::instance.stop();

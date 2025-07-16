@@ -1,12 +1,12 @@
 {
-    "data": "data/UCR-time-series/UWaveGestureLibraryX.csv",
-    "compress": "out/compress/UWaveGestureLibraryX_pmc.bin",
-    "decompress": "out/decompress/UWaveGestureLibraryX_pmc.csv",
+    "data": "data/UCR-time-series/InsectEPGRegularTrain.csv",
+    "compress": "out/compress/InsectEPGRegularTrain_pmc.bin",
+    "decompress": "out/decompress/InsectEPGRegularTrain_pmc.csv",
     "interval": 1,
     "algorithm": {
         "name": "normal-equation",
-        "error": 0.6112,
-        "mode": "individual",
+        "error": 0.1698,
+        "mode": "accumulate",
         "degree": 2
     }
 }

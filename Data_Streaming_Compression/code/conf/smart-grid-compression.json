@@ -1,11 +1,11 @@
 {
-    "data": "data/UCR-time-series/StarLightCurves.csv",
-    "compress": "out/compress/star_smart-grid-compression.bin",
-    "decompress": "out/decompress/star_smart-grid-compression.csv",
+    "data": "data/UCR-time-series/Fungi.csv",
+    "compress": "out/compress/fungi_smart-grid-compression.bin",
+    "decompress": "out/decompress/fungi_smart-grid-compression.csv",
     "interval": 1,
     "algorithm": {
         "name": "smart-grid-compression",
-        "error": 0.407,
+        "error": 4.355,
         "degree": 3
     }
 }

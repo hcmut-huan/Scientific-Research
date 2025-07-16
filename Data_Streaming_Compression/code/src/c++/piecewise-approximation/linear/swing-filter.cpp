@@ -31,7 +31,9 @@ namespace SwingFilter {
 
     BinObj* Compression::serialize() {
         BinObj* obj = new BinObj;
-        obj->put((short)(this->curr_end->x - this->prev_end->x));
+        long delta = this->curr_end->x - this->prev_end->x;
+        
+        obj->put(VariableByteEncoding::encode(delta));
         obj->put((float) this->curr_end->y);
 
         return obj;
@@ -93,9 +95,9 @@ namespace SwingFilter {
                     this->l_line = new Line(l_line.get_slope(), l_line.get_intercept());
                 }
             }
-
-            this->__fit(p);
         }
+
+        this->__fit(p);
     }
     // End: compression
 
@@ -110,8 +112,8 @@ namespace SwingFilter {
 
     CSVObj* Decompression::decompress() {
         if (this->prev_end == nullptr) {
-            unsigned short start = compress_data->getShort();
-            float value = compress_data->getFloat();
+            long start = VariableByteEncoding::decode(this->compress_data);;
+            float value = this->compress_data->getFloat();
             this->prev_end = new Point2D(start, value);
 
             return nullptr;
@@ -120,15 +122,15 @@ namespace SwingFilter {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        unsigned short length = compress_data->getShort();
-        float value = compress_data->getFloat();
+        long length = VariableByteEncoding::decode(this->compress_data);
+        float value = this->compress_data->getFloat();
         Point2D* curr_end = new Point2D(this->prev_end->x + length, value);
         Line line = Line::line(*curr_end, *this->prev_end);
 
         delete this->prev_end;
         this->prev_end = curr_end;
 
-        for (int i=this->index; i<=curr_end->x; i++) {
+        for (long i=this->index; i<=curr_end->x; i++) {
             if (base_obj == nullptr) {
                 base_obj = new CSVObj;
                 base_obj->pushData(std::to_string(this->basetime + i * interval));

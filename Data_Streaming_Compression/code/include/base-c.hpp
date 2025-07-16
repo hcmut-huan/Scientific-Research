@@ -4,6 +4,7 @@
 #include <map>
 #include <cmath>
 #include <vector>
+#include <deque>
 #include <iostream>
 #include <algorithm>
 #include <eigen/Eigen>

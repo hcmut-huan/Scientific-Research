@@ -6,6 +6,6 @@
     "algorithm": {
         "name": "pmc",
         "error": 0.6112,
-        "mode": "mean"
+        "mode": "midrange"
     }
 }

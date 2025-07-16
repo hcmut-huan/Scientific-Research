@@ -31,11 +31,23 @@ int main(int argc, char** argv) {
         decompressor.initialize();
         decompressor.run();
     }
-    // else if (ALGO == "slide-filter") {
-    //     SlideFilter::decompress(INPUT, OUTPUT, INTERVAL);
-    // }
+    else if (ALGO == "slide-filter") {
+        SlideFilter::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
+        decompressor.initialize();
+        decompressor.run();
+    }
     else if (ALGO == "optimal-pla") {
         OptimalPLA::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
+        decompressor.initialize();
+        decompressor.run();
+    }
+    else if (ALGO == "semi-optimal-pla") {
+        SemiOptimalPLA::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
+        decompressor.initialize();
+        decompressor.run();
+    }
+    else if (ALGO == "semi-mixed-pla") {
+        SemiMixedPLA::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
         decompressor.initialize();
         decompressor.run();
     }
@@ -57,9 +69,11 @@ int main(int argc, char** argv) {
     // else if (ALGO == "unbounded") {
     //     Unbounded::decompress(INPUT, OUTPUT, INTERVAL);
     // }
-    // else if (ALGO == "bounded") {
-    //     Bounded::decompress(INPUT, OUTPUT, INTERVAL);
-    // }
+    else if (ALGO == "bounded") {
+        Bounded::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
+        decompressor.initialize();
+        decompressor.run();
+    }
 
     Monitor::instance.stop();
 

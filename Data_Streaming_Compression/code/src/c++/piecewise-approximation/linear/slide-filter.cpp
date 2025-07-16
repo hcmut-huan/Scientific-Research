@@ -1,263 +1,306 @@
-// #include "piecewise-approximation/linear.hpp"
+#include "piecewise-approximation/linear.hpp"
 
-// namespace SlideFilter {
-    
-//     Clock clock;
+namespace SlideFilter {
 
-//     void __yield(BinObj* obj, double index, float value) {
-//         obj->put(index);
-//         obj->put(value);
-//     }
+    // Begin: compression
+    Line Compression::__fit() {
+        double slope = 0;
+        double intercept = 0;
 
-//     Line __fit(std::vector<Point2D>& segment, Line& u, Line& l) {
-//         if (u.get_slope() - l.get_slope() < 0.0000001) {
-//             return Line(u.get_slope(), u.get_intercept());
-//         }
-//         else {
-//             Point2D p = Line::intersection(u, l);
-//             double A_num = 0, A_den = 0;
-
-//             for (Point2D& data : segment) {
-//                 A_num += (data.y-p.y)*(data.x-p.x);
-//                 A_den += (data.x-p.x)*(data.x-p.x);
-//             }
-
-//             double A_ig = A_num / A_den;
-//             double temp = A_ig > u.get_slope() ? u.get_slope() : A_ig;
-//             double a_ig = temp > l.get_slope() ? temp : l.get_slope();
-//             double b_ig = p.y - a_ig * p.x;
-
-//             return Line(a_ig, b_ig);
-//         }   
-//     }
-
-//     // check if [a, b] interval exists and return [a, b]
-//     // ** important: 
-//     //      Something went wrong need to be revisited in both implementation and original paper
-//     std::pair<double, double> interval_exist(Line& prev_g, Line& prev_u, Line& prev_l, Line& u_line, Line& l_line, double t_j_k) {
-//         std::pair<double, double> interval = std::make_pair(-1, -1);
-
-//         if (u_line.get_slope() - l_line.get_slope() > 0.0000001) {
-//             Point2D p = Line::intersection(u_line, l_line);
-
-//             if (prev_g.subs(p.x)-p.y>0) {
-//                 // point below g^{k-1}
-//                 double f_i_k = Line::intersection(l_line, prev_g).x;
-//                 if (l_line.subs(t_j_k)-prev_l.subs(t_j_k)>0) {
-//                     // find hyperplane s
-//                     Point2D s1(t_j_k, prev_l.subs(t_j_k));
-//                     Point2D s2 = Line::intersection(u_line, l_line);
-//                     Line s = Line::line(s1, s2);
-
-//                     double c_i = Line::intersection(prev_g, u_line).x;     // c_i^k
-//                     double d_i = Line::intersection(prev_g, s).x;     // d_i^k
-//                     double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
-
-//                     if (max_c_vs_d < t_j_k && f_i_k < t_j_k) {
-//                         interval = max_c_vs_d > f_i_k ? std::make_pair(f_i_k, max_c_vs_d) : std::make_pair(max_c_vs_d, f_i_k);
-//                     }
-//                 }
-                
-//             }
-//             else if (p.y-prev_g.subs(p.x)>0) {
-//                 // point above g^{k-1}
-//                 double f_i_k = Line::intersection(u_line, prev_g).x;                
-//                 if (prev_u.subs(t_j_k)-u_line.subs(t_j_k)>0) {
-//                     // find hyperplane q
-//                     Point2D q1(t_j_k, prev_u.subs(t_j_k));
-//                     Point2D q2 = Line::intersection(u_line, l_line);
-//                     Line q = Line::line(q1, q2);
-
-//                     double c_i = Line::intersection(prev_g, l_line).x;   // c_i^k'
-//                     double d_i = Line::intersection(prev_g, q).x;   // d_i^k'
-//                     double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
-
-//                     if (max_c_vs_d < t_j_k && f_i_k < t_j_k) {
-//                         interval = max_c_vs_d > f_i_k ? std::make_pair(f_i_k, max_c_vs_d) : std::make_pair(max_c_vs_d, f_i_k);
-//                     }
-//                 }
-                
-//             }
-//         }
-        
-//         return interval;
-//     }
-
-//     void compress(TimeSeries& timeseries, float bound, std::string output) {
-//         clock.start();
-//         IterIO outputFile(output, false);
-//         BinObj* compress_data = new BinObj;
-
-//         Univariate* d1 = (Univariate*) timeseries.next();
-//         compress_data->put(d1->get_time());
-//         Point2D p1(0, d1->get_value());
-        
-//         Univariate* d2 = (Univariate*) timeseries.next();
-//         Point2D p2(1, d2->get_value());
-        
-//         Line u_line = Line::line(Point2D(p1.x, p1.y-bound), Point2D(p2.x, p2.y+bound));
-//         Line l_line = Line::line(Point2D(p1.x, p1.y+bound), Point2D(p2.x, p2.y-bound));
-//         ConvexHull cvx; cvx.append(p1); cvx.append(p2);
-        
-//         Line prev_u(0, 0); Line prev_l(0, 0); Line prev_g(0, 0); long prev_i = 0;
-//         std::vector<Point2D> segment = {p1, p2};
-//         long index = 2;
-//         bool first = true;
-//         while (timeseries.hasNext()) {
-//             Point2D p(index, ((Univariate*) timeseries.next())->get_value());
+        if (this->u_line->get_slope() == this->l_line->get_slope()) {
+            slope = (this->u_line->get_slope() + this->l_line->get_slope()) / 2;    
+            intercept = (this->u_line->get_intercept() + this->l_line->get_intercept()) / 2;
+        }
+        else {
+            double A_num = 0;
+            double A_den = 0;
+            Point2D p0 = Line::intersection(*this->u_line, *this->l_line);
             
-//             if (p.y-u_line.subs(p.x)>bound || l_line.subs(p.x)-p.y>bound) {
-//                 if (!first) {
-//                     std::pair<double, double> interval = interval_exist(prev_g, prev_u, prev_l, u_line, l_line, prev_i);
-                    
-//                     if (interval.first != -1) {
-//                         Point2D z = Line::intersection(u_line, l_line);
-//                         if (prev_g.subs(z.x)-z.y>0) {
-//                             u_line = Line::line(z, Point2D(interval.first, prev_g.subs(interval.first)));
-//                             l_line = Line::line(z, Point2D(interval.second, prev_g.subs(interval.second)));
-//                         }
-//                         else if(z.y-prev_g.subs(z.x)>0) {
-//                             u_line = Line::line(z, Point2D(interval.second, prev_g.subs(interval.second)));
-//                             l_line = Line::line(z, Point2D(interval.first, prev_g.subs(interval.first)));
-//                         }
-//                     }
+            for (Point2D& p : this->segments) {
+                A_num += (p.y-p0.y)*(p.x-p0.x);
+                A_den += (p.x-p0.x)*(p.x-p0.x);
+            }
 
-//                     Line g_k = __fit(segment, u_line, l_line);
-//                     if (interval.first != -1) {
-//                         Point2D knot = Line::intersection(g_k, prev_g);
-//                         __yield(compress_data, (double) knot.x, knot.y);
-//                     }
-//                     else {
-//                         Point2D p1 = Point2D(prev_i, prev_g.subs(prev_i));
-//                         Point2D p2 = Point2D(prev_i+1, g_k.subs(prev_i+1));
+            double A_ig = this->A_num / this->A_den;
+            double temp = A_ig > this->u_line->get_slope() ? this->u_line->get_slope() : A_ig;
+            
+            slope = temp > this->l_line->get_slope() ? temp : this->l_line->get_slope();
+            intercept = p0.y - slope * p0.x;
+        }
+        
+        return Line(slope, intercept);
+    }
+    
+    double Compression::__checkConnected() {
+        double t_j_k = this->pivot->x;
+        Point2D p = Line::intersection(*this->u_line, *this->l_line);
 
-//                         __yield(compress_data, (double) -p1.x, p1.y);
-//                         __yield(compress_data, (double) p2.x, p2.y);
-//                     }
-//                     prev_g = g_k;
-//                 }
-//                 else {
-//                     first = false;
-//                     Line g_k = __fit(segment, u_line, l_line);
-//                     __yield(compress_data, (double) 0.0, g_k.subs(0));
-//                     prev_g = g_k;
-//                 }
+        if (this->prev_g->subs(p.x)>p.y) {
+            // point below g^{k-1}
+            double f_i_k = Line::intersection(*this->l_line, *this->prev_g).x;
+            if (f_i_k<t_j_k && this->l_line->subs(t_j_k-1)>prev_l->subs(t_j_k-1)) {
+                // find hyperplane s
+                Line s = Line::line(Point2D(t_j_k-1, this->prev_l->subs(t_j_k-1)), p);
 
-//                 if (timeseries.hasNext()) {
-//                     prev_u = u_line, prev_l = l_line; prev_i = index-1;
+                double c_i = Line::intersection(*this->prev_g, *this->u_line).x;     // c_i^k
+                double d_i = Line::intersection(*this->prev_g, s).x;     // d_i^k
+                double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
 
-//                     Point2D next_p(++index, ((Univariate*) timeseries.next())->get_value());
-//                     u_line = Line::line(Point2D(p.x, p.y-bound), Point2D(next_p.x, next_p.y+bound));
-//                     l_line = Line::line(Point2D(p.x, p.y+bound), Point2D(next_p.x, next_p.y-bound));
+                if ((c_i > f_i_k && d_i > f_i_k) || max_c_vs_d < p.x || f_i_k < p.x) return -1;
+                else if (c_i > f_i_k) return (d_i + f_i_k) / 2;
+                else if (d_i > f_i_k) return (c_i + f_i_k) / 2;
+                else return (max_c_vs_d + f_i_k) / 2;            
+            }
+        }
+        else if (p.y>this->prev_g->subs(p.x)) {
+            // point above g^{k-1}
+            double f_i_k = Line::intersection(*this->u_line, *this->prev_g).x;                          
+            if (f_i_k<t_j_k && this->prev_u->subs(t_j_k-1)>this->u_line->subs(t_j_k-1)) {
+                // find hyperplane q
+                Line q = Line::line(Point2D(t_j_k-1, this->prev_u->subs(t_j_k-1)), p);
 
-//                     index++;
-//                     segment = {p, next_p};
-//                     cvx.clear(); cvx.append(p); cvx.append(next_p);
-//                 }
-//             }
-//             else {
-//                 cvx.append(p);
-//                 if (p.y-l_line.subs(p.x)>bound) {
-//                     for (int i=0; i<cvx.size(); i++) {
-//                         Point2D cvx_p = cvx.at(i);
-//                         if (cvx_p.x != p.x) {
-//                             Line l = Line::line(Point2D(cvx_p.x, cvx_p.y+bound), Point2D(p.x, p.y-bound));
-//                             l_line = l.get_slope() > l_line.get_slope() ? l: l_line;
-//                         }    
-//                     }
-//                 }
-//                 if (u_line.subs(p.x)-p.y>bound) {
-//                     for (int i=0; i<cvx.size(); i++) {
-//                         Point2D cvx_p = cvx.at(i);
-//                         if (cvx_p.x != p.x) {
-//                             Line l = Line::line(Point2D(cvx_p.x, cvx_p.y-bound), Point2D(p.x, p.y+bound));
-//                             u_line = l.get_slope() < u_line.get_slope() ? l: u_line;
-//                         }
-//                     }
-//                 }
+                double c_i = Line::intersection(*this->prev_g, *this->l_line).x;   // c_i^k'
+                double d_i = Line::intersection(*this->prev_g, q).x;   // d_i^k'
+                double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
                 
-//                 index++;
-//                 segment.push_back(p);
-//             }
-//         }
-
-//         outputFile.writeBin(compress_data);
-//         outputFile.close();
-//         delete compress_data;
+                if ((c_i > f_i_k && d_i > f_i_k) || max_c_vs_d < p.x || f_i_k < p.x) return -1;
+                else if (c_i > f_i_k) return (d_i + f_i_k) / 2;
+                else if (d_i > f_i_k) return (c_i + f_i_k) / 2;
+                else return (max_c_vs_d + f_i_k) / 2;         
+            }
+        }
         
-//         clock.tick();
-//         double avg_time = clock.getAvgDuration() / timeseries.size();
+        return -1;
+    }
 
-//         // Profile average latency
-//         std::cout << std::fixed << "Time taken for each data point (ns): " << avg_time << "\n";
-//         IterIO timeFile(output+".time", false);
-//         timeFile.write("Time taken for each data point (ns): " + std::to_string(avg_time));
-//         timeFile.close();
-//     }
+    void Compression::initialize(int count, char** params) {
+        this->error = atof(params[0]);
+    }
 
-    
-//     void __decompress_segment(IterIO& file, int interval, time_t basetime, Point2D p1, Point2D p2) {
-//         if (p2.x < 0) {
-//             Line l = Line::line(p1, Point2D(-p2.x, p2.y));
-//             long start = std::ceil(p1.x);
-//             float end = -p2.x;
-//             while (start <= end) {
-//                 CSVObj obj;
-//                 obj.pushData(std::to_string(basetime + interval * start));
-//                 obj.pushData(std::to_string(start * l.get_slope() + l.get_intercept()));
-//                 file.write(&obj);
-//                 start++;
-//             }
-//         }
-//         else {
-//             Line l = Line::line(p1, p2);
-//             long start = std::ceil(p1.x);
-//             double end = p2.x;
-//             while (start < end) {
-//                 CSVObj obj;
-//                 obj.pushData(std::to_string(basetime + interval * start));
-//                 obj.pushData(std::to_string(start * l.get_slope() + l.get_intercept()));
-//                 file.write(&obj);
-//                 start++;
-//             }
-//         }
-//     }
+    void Compression::finalize() {
+        this->yield();
+        this->segment_pos = 2;
+        this->yield();
 
-//     void decompress(std::string input, std::string output, int interval) {
-//         IterIO inputFile(input, true, true);
-//         IterIO outputFile(output, false);
-//         BinObj* compress_data = inputFile.readBin();
+        if (this->pivot != nullptr) delete this->pivot;
+        if (this->u_line != nullptr) delete this->u_line;
+        if (this->l_line != nullptr) delete this->l_line;
+        if (this->prev_end != nullptr) delete this->prev_end;
+        if (this->prev_g != nullptr) delete this->prev_g;
+        if (this->prev_u != nullptr) delete this->prev_u;
+        if (this->prev_l != nullptr) delete this->prev_l;
+    }
 
-//         time_t basetime = compress_data->getLong();
-//         float s_index = compress_data->getDouble();
-//         float s_value = compress_data->getFloat();
-//         Point2D start(s_index, s_value);
+    BinObj* Compression::serialize() {
+        BinObj* obj = new BinObj;
 
-//         clock.start();
-//         while (compress_data->getSize() != 0) {
-//             float e_index = compress_data->getDouble();
-//             float e_value = compress_data->getFloat();
-//             Point2D end = Point2D(e_index, e_value);
+        if (this->segment_pos == 0) {           
+            Line g_k = this->__fit(); 
+            this->prev_g = new Line(g_k.get_slope(), g_k.get_intercept());
+            this->prev_end = new Point2D(0, this->prev_g->subs(0));
+            
+            obj->put((short) this->prev_end->x);
+            obj->put((float) this->prev_end->y);
+        }
+        else if (this->segment_pos == 2) {
+            obj->put((float) (this->index - 1 - this->prev_end->x));
+            obj->put((float) this->prev_g->subs(this->index-1));
+        }
+        else {
+            double connected_endpoint = this->__checkConnected();
+            if (connected_endpoint == -1) {
+                // Line g_k = this->__fit(); 
+                Line g_k(
+                    this->u_line->get_slope() / 2 + this->l_line->get_slope() / 2,
+                    this->u_line->get_intercept() / 2 + this->l_line->get_intercept() / 2
+                );
 
-//             if (start.x >= 0) {
-//                 __decompress_segment(outputFile, interval, basetime, start, end);
-//             }
-//             start = end;
+                obj->put((float) (this->prev_end->x - this->pivot->x));
+                obj->put((float) this->prev_g->subs(this->pivot->x));
+                obj->put((float) g_k.subs(this->pivot->x));
+
+                this->prev_end->x = this->pivot->x;
+                this->prev_end->y = g_k.subs(this->pivot->x);
+
+                delete this->prev_g;
+                this->prev_g = new Line(g_k.get_slope(), g_k.get_intercept());
+            }
+            else {
+                Point2D p = Line::intersection(*this->u_line, *this->l_line);
+                Point2D curr_end(connected_endpoint, this->prev_g->subs(connected_endpoint));
+                Line g_k = Line::line(p, curr_end);
+
+                obj->put((float) (connected_endpoint - this->prev_end->x));
+                obj->put((float) curr_end.y);
+
+                this->prev_end->x = curr_end.x;
+                this->prev_end->y = curr_end.y;
+
+                delete this->prev_g;
+                this->prev_g = new Line(g_k.get_slope(), g_k.get_intercept());
+            }
+        }
+
+        return obj;
+    }
+
+    void Compression::compress(Univariate* data) {
+        Point2D p(this->index++, data->get_value());
+
+        if (this->pivot == nullptr) {
+            this->pivot = new Point2D(p.x, p.y);
+            this->cvx.append(p);
+        }
+        else if (this->u_line == nullptr) {
+            Line u_line = Line::line(
+                Point2D(this->pivot->x, this->pivot->y-this->error), 
+                Point2D(p.x, p.y+this->error)
+            );
+            Line l_line = Line::line(
+                Point2D(this->pivot->x, this->pivot->y+this->error), 
+                Point2D(p.x, p.y-this->error)
+            );
+
+            this->u_line = new Line(u_line.get_slope(), u_line.get_intercept());
+            this->l_line = new Line(l_line.get_slope(), l_line.get_intercept());
+            this->cvx.append(p);
+        }
+        else {
+            if (p.y-this->u_line->subs(p.x)>this->error || this->l_line->subs(p.x)-p.y>this->error) {
+                this->yield();
+                if (this->segment_pos == 0) this->segment_pos = 1;
+                else {
+                    delete this->prev_u;
+                    delete this->prev_l;
+                }
+
+                this->prev_u = this->u_line; this->u_line = nullptr;
+                this->prev_l = this->l_line; this->l_line = nullptr;
+                this->cvx.clear();
+
+                this->pivot->x = p.x; this->pivot->y = p.y;
+                this->cvx.append(p);
+            }
+            else {
+                cvx.append(p);
+                if (p.y-this->l_line->subs(p.x)>this->error) {
+                    for (int i=0; i<cvx.size(); i++) {
+                        Point2D cvx_p = cvx.at(i);
+                        if (cvx_p.x == p.x) continue;
+
+                        Line l = Line::line(Point2D(cvx_p.x, cvx_p.y+this->error), Point2D(p.x, p.y-this->error));
+                        if (l.get_slope() > this->l_line->get_slope()) {
+                            delete this->l_line;
+                            this->l_line = new Line(l.get_slope(), l.get_intercept());
+                        }
+                    }
+                }
+                
+                if (this->u_line->subs(p.x)-p.y>this->error) {
+                    for (int i=0; i<cvx.size(); i++) {
+                        Point2D cvx_p = cvx.at(i);
+                        if (cvx_p.x == p.x) continue;
+
+                        Line l = Line::line(Point2D(cvx_p.x, cvx_p.y-this->error), Point2D(p.x, p.y+this->error));
+                        if (l.get_slope() < this->u_line->get_slope()) {
+                            delete this->u_line;
+                            this->u_line = new Line(l.get_slope(), l.get_intercept());
+                        }
+                    }
+                }
+            }
+        }
+
+        this->segments.push_back(p);
+    }
+    // End: compression
+
+    // Begin: decompression
+    void Decompression::initialize() {
+        // Do nothing
+    }
+
+    void Decompression::finalize() {
+        if (this->prev_end != nullptr) delete this->prev_end;
+    }
+
+    CSVObj* Decompression::decompress() {
+        if (this->prev_end == nullptr) {
+            unsigned short start = this->compress_data->getShort();
+            float value = compress_data->getFloat();
+            this->prev_end = new Point2D(start, value);
+
+            return nullptr;
+        }
+
+        CSVObj* base_obj = nullptr;
+        CSVObj* prev_obj = nullptr;
+
+        float delta = this->compress_data->getFloat();
+        if (delta > 0) {
+            float value = compress_data->getFloat();
+
+            Point2D* curr_end = new Point2D(this->prev_end->x + delta, value);
+            Line line = Line::line(*curr_end, *this->prev_end);
+
+            delete this->prev_end;
+            this->prev_end = curr_end;
+
+            for (long i=this->index; i<=curr_end->x+EPSILON; i++) {
+                if (base_obj == nullptr) {
+                    base_obj = new CSVObj;
+                    base_obj->pushData(std::to_string(this->basetime + i * interval));
+                    base_obj->pushData(std::to_string(line.subs(i)));
+
+                    prev_obj = base_obj;
+                }
+                else {
+                    CSVObj* obj = new CSVObj;
+                    obj->pushData(std::to_string(this->basetime + i * interval));
+                    obj->pushData(std::to_string(line.subs(i)));
+
+                    prev_obj->setNext(obj);
+                    prev_obj = obj;
+                }
+            }
+
+            this->index = ((long) curr_end->x) + 1;
+        }
+        else {
+            float val_1 = compress_data->getFloat();
+            float val_2 = compress_data->getFloat();
+            
+            Point2D* curr_end = new Point2D(this->prev_end->x - delta, val_1);
+            Line line = Line::line(*curr_end, *this->prev_end);
+
+            delete this->prev_end;
+            this->prev_end = curr_end;
+            this->prev_end->y = val_2;
+
+            for (long i=this->index; i<std::lround(curr_end->x); i++) {
+                if (base_obj == nullptr) {
+                    base_obj = new CSVObj;
+                    base_obj->pushData(std::to_string(this->basetime + i * interval));
+                    base_obj->pushData(std::to_string(line.subs(i)));
+
+                    prev_obj = base_obj;
+                }
+                else {
+                    CSVObj* obj = new CSVObj;
+                    obj->pushData(std::to_string(this->basetime + i * interval));
+                    obj->pushData(std::to_string(line.subs(i)));
+
+                    prev_obj->setNext(obj);
+                    prev_obj = obj;
+                }
+            }
+
+            this->index = std::lround(curr_end->x);
+        }
 
         
-//             clock.tick();
-//         }
-
-//         delete compress_data;
-//         inputFile.close();
-//         outputFile.close();
-
-//         // Profile average latency
-//         std::cout << std::fixed << "Time taken for each segment (ns): " << clock.getAvgDuration() << "\n";
-//         IterIO timeFile(output+".time", false);
-//         timeFile.write("Time taken for each segment (ns): " + std::to_string(clock.getAvgDuration()));
-//         timeFile.close();
-//     }
-    
-// };
+        return base_obj;
+    }
+    // End: decompression
+};
 

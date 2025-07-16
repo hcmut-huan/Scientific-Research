@@ -14,22 +14,36 @@ class UpperHull {
 
             while (this->points.size() > 2) {
                 int size = this->points.size();
-                Point2D p1 = this->points.at(size-1);
+                Point2D& p1 = point;
                 Point2D p2 = this->points.at(size-2);
                 Point2D p3 = this->points.at(size-3);
 
                 Line line = Line::line(p1, p3);
-                if (std::abs(line.subs(p2.x) - p2.y) < 0.00001) {
-                    this->points.erase(this->points.begin()+size-2);
-                }
-                else if (line.subs(p2.x) > p2.y) {
+                if (std::abs(line.subs(p2.x) - p2.y) < 0.00001 || line.subs(p2.x) > p2.y) {
                     this->points.erase(this->points.begin()+size-2);
                 }
                 else {
                     break;
                 }
             }
-        
+        }
+
+        void append_backward(Point2D point) {
+            this->points.insert(this->points.begin(), point);
+
+            while (this->points.size() > 2) {
+                Point2D& p1 = point;
+                Point2D p2 = this->points.at(1);
+                Point2D p3 = this->points.at(2);
+
+                Line line = Line::line(p1, p3);
+                if (std::abs(line.subs(p2.x) - p2.y) < 0.00001 || line.subs(p2.x) > p2.y) {
+                    this->points.erase(this->points.begin()+1);
+                }
+                else {
+                    break;
+                }
+            }
         }
 
         Point2D at(int i) {
@@ -44,8 +58,19 @@ class UpperHull {
             this->points.clear();
         }
 
+        Point2D pop() {
+            Point2D p = this->points.back();
+            this->points.pop_back();
+
+            return p;
+        }
+
         void erase_from_begin(int length) {
             this->points.erase(this->points.begin(), this->points.begin() + length);
+        }
+
+        void erase_from_end(int index) {
+            this->points.erase(this->points.begin() + index, this->points.end());
         }
 };
 
@@ -64,17 +89,31 @@ class LowerHull {
                 Point2D p3 = this->points.at(size-3);
 
                 Line line = Line::line(p1, p3);
-                if (std::abs(p2.y - line.subs(p2.x)) < 0.00001) {
-                    this->points.erase(this->points.begin()+size-2);
-                }
-                else if (p2.y > line.subs(p2.x)) {
+                if (std::abs(p2.y - line.subs(p2.x)) < 0.00001 || p2.y > line.subs(p2.x)) {
                     this->points.erase(this->points.begin()+size-2);
                 }
                 else {
                     break;
                 }
             }
-        
+        }
+
+        void append_backward(Point2D point) {
+            this->points.insert(this->points.begin(), point);
+
+            while (this->points.size() > 2) {
+                Point2D p1 = this->points.at(0);
+                Point2D p2 = this->points.at(1);
+                Point2D p3 = this->points.at(2);
+
+                Line line = Line::line(p1, p3);
+                if (std::abs(p2.y - line.subs(p2.x)) < 0.00001 || p2.y > line.subs(p2.x)) {
+                    this->points.erase(this->points.begin()+1);
+                }
+                else {
+                    break;
+                }
+            }
         }
 
         Point2D at(int i) {
@@ -89,8 +128,19 @@ class LowerHull {
             this->points.clear();
         }
 
+        Point2D pop() {
+            Point2D p = this->points.back();
+            this->points.pop_back();
+
+            return p;
+        }
+
         void erase_from_begin(int length) {
             this->points.erase(this->points.begin(), this->points.begin() + length);
+        }
+
+        void erase_from_end(int index) {
+            this->points.erase(this->points.begin() + index, this->points.end());
         }
 };
 

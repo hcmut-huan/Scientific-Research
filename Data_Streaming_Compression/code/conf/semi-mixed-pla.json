@@ -1,0 +1,10 @@
+{
+    "data": "data/UCR-time-series/Fungi.csv",
+    "compress": "out/compress/fungi_semi-mixed-pla.bin",
+    "decompress": "out/decompress/fungi_semi-mixed-pla.csv",
+    "interval": 1,
+    "algorithm": {
+        "name": "semi-mixed-pla",
+        "error": 4.355
+    }
+}

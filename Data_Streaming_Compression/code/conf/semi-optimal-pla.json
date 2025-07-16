@@ -1,0 +1,10 @@
+{
+    "data": "data/UCR-time-series/Crop.csv",
+    "compress": "out/compress/fungi_semi-optimal-pla.bin",
+    "decompress": "out/decompress/fungi_semi-optimal-pla.csv",
+    "interval": 1,
+    "algorithm": {
+        "name": "semi-optimal-pla",
+        "error": 0.10325
+    }
+}

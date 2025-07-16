@@ -265,6 +265,25 @@ class VariableByteEncoding {
         }
 };
 
+class ZigZagEncoding {
+    public:
+        static unsigned short encode(short number) {
+            return (number << 1) ^ (number >> 15);
+        }
+
+        static unsigned int encode(int number) {
+            return (number << 1) ^ (number >> 31);
+        }
+
+        static short decode(unsigned short number) {
+            return (number >> 1) ^ -(number & 1);
+        }
+
+        static int decode(unsigned int number) {
+            return (number >> 1) ^ -(number & 1);
+        }
+};
+
 class BatchIO {
     public:
         static void write(std::string filename, IOObj* obj, bool append = false) {

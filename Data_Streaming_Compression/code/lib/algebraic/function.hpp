@@ -49,7 +49,7 @@ class Line {
         }
 
         static Line line(Point2D p1, Point2D p2) {
-            double slope = (p1.y - p2.y) / (double) (p1.x-p2.x);
+            double slope = (p1.y - p2.y) / (p1.x - p2.x);
             double intercept = p1.y - slope*p1.x;
 
             return Line(slope, intercept);

@@ -1,12 +1,12 @@
 {
-    "data": "data/UCR-time-series/EthanolLevel.csv",
-    "compress": "out/compress/EthanolLevel_pmc.bin",
-    "decompress": "out/decompress/EthanolLevel_pmc.csv",
+    "data": "data/UCR-time-series/UWaveGestureLibraryX.csv",
+    "compress": "out/compress/UWaveGestureLibraryX_pmc.bin",
+    "decompress": "out/decompress/UWaveGestureLibraryX_pmc.csv",
     "interval": 1,
     "algorithm": {
         "name": "hybrid-pca",
-        "error": 0.1534,
-        "w_size": 50,
-        "n_window": 10
+        "error": 0.6112,
+        "w_size": 40,
+        "n_window": 40
     }
 }

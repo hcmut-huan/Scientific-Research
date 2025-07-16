@@ -6,6 +6,9 @@ data = np.genfromtxt(file, delimiter=',')
 
 value_range = np.max(data[:,1]) - np.min(data[:,1])
 
+
+print("1% -> epsilon =", value_range/100)
+print("2.5% -> epsilon =", value_range*2.5/100)
 print("5% -> epsilon =", value_range*5/100)
 print("10% -> epsilon =", value_range*10/100)
 print("15% -> epsilon =", value_range*15/100)

@@ -29,7 +29,11 @@ def validate(algo):
         if "error" not in algo:
             exit(Error.MISSING_PARAM.value)
 
-    elif algo["name"] == "conn-pla":
+    elif algo["name"] == "semi-optimal-pla":
+        if "error" not in algo:
+            exit(Error.MISSING_PARAM.value)
+    
+    elif algo["name"] == "semi-mixed-pla":
         if "error" not in algo:
             exit(Error.MISSING_PARAM.value)
         
@@ -76,7 +80,9 @@ def parse(conf):
         print("{} {} {} {}".format(algo["name"], algo["error"], algo["mode"], algo["degree"]))
     elif algo["name"] == "optimal-pla":
         print("{} {}".format(algo["name"], algo["error"]))
-    elif algo["name"] == "conn-pla":
+    elif algo["name"] == "semi-optimal-pla":
+        print("{} {}".format(algo["name"], algo["error"]))
+    elif algo["name"] == "semi-mixed-pla":
         print("{} {}".format(algo["name"], algo["error"]))
     elif algo["name"] == "swing-filter":
         print("{} {}".format(algo["name"], algo["error"]))

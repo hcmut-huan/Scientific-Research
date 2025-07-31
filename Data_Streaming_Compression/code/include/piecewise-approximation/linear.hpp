@@ -143,6 +143,73 @@ namespace OptimalPLA {
     };
 };
 
+namespace ConnIPLA {
+    // Source paper: Online Piece-wise Linear Approximation of Numerical Streams with Precision Guarantees
+    // Source path: src/piecewise-approximation/linear/swing-filter.cpp
+
+    class LinearSegment {
+        private:
+            bool isOptimal;
+            UpperHull u_cvx;
+            LowerHull l_cvx;
+            Point2D* pivot = nullptr;
+            
+            void __optimal_approximate(Point2D& p, double error);
+            void __fsw_approximate(Point2D& p, double error);
+
+        public:
+            long t_start;
+            bool is_complete = false;
+
+            Line* u_line = nullptr;
+            Line* l_line = nullptr;
+            
+            LinearSegment(Point2D p);
+            LinearSegment(Point2D u_p, Point2D l_p);
+            ~LinearSegment();
+
+            Line getLine();
+            void approximate(Point2D& p, double error);
+    };
+
+    
+    class Compression : public BaseCompression {
+        private:
+            double error = 0;
+
+            int phase = 0;
+            LinearSegment* s_1 = nullptr;
+            LinearSegment* s_2 = nullptr;
+
+            long index = 0;
+            Point2D* prev_end = nullptr;
+            Point2D* curr_end = nullptr;
+
+        protected:
+            void compress(Univariate* data) override;
+            BinObj* serialize() override;
+
+        public:
+            Compression(std::string output) : BaseCompression(output) {}      
+            void initialize(int count, char** params) override;
+            void finalize() override;
+    };
+
+    class Decompression : public BaseDecompression {
+        private:
+            long index = 0;
+            Point2D* prev_end = nullptr;
+
+        protected:
+            CSVObj* decompress() override;
+
+        public:
+            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
+            void initialize() override;
+            void finalize() override;
+    };
+};
+
 namespace SemiOptimalPLA {
     // Source paper: An Optimal Online Semi-Connected PLA Algorithm With Maximum Error Bound
     // Source path: src/piecewise-approximation/linear/semi-optimal-pla.cpp
@@ -174,7 +241,7 @@ namespace SemiOptimalPLA {
             void updateExtrm();
             Point2D popLast(bool flag);
             bool isSemiConnected(Line* line, double bound);            
-            void approximate(Point2D p, double error);
+            void approximate(Point2D& p, double error);
     };
 
     class Compression : public BaseCompression {
@@ -246,7 +313,7 @@ namespace SemiMixedPLA {
             void updateExtrm();
             Point2D popLast(bool flag);
             bool isSemiConnected(Line* line, double bound);            
-            void approximate(Point2D p, double error);
+            void approximate(Point2D& p, double error);
     };
 
     class SemiOptimalPLA {
@@ -276,7 +343,7 @@ namespace SemiMixedPLA {
             // return 1: case 1 of semi connected
             // return 2: case 2 of semi connected
             // return 3: case 3 of semi connected
-            int approximate(Point2D p, double error);
+            int approximate(Point2D& p, double error);
     };
 
     class Compression : public BaseCompression {

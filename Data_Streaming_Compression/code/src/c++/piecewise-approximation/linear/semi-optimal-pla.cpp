@@ -167,7 +167,7 @@ namespace SemiOptimalPLA {
         return p;
     }
 
-    void OptimalPLA::approximate(Point2D p, double error) {        
+    void OptimalPLA::approximate(Point2D& p, double error) {        
         if (this->pivot == nullptr) {
             this->t_start = p.x;
             this->pivot = new Point2D(p.x, p.y);
@@ -291,6 +291,7 @@ namespace SemiOptimalPLA {
             }
 
             if (this->seg_2->is_complete) {
+                this->buffer.push_front(p);
                 switch (this->__check()) {
                     case 3:
                         this->seg_2->backward();
@@ -299,7 +300,7 @@ namespace SemiOptimalPLA {
                             Point2D shrink_point = this->seg_2->shrink(this->seg_1, this->error);
                             this->buffer.push_front(shrink_point);
                         } 
-                        while(this->__check() == 3);
+                        while(this->__check() == 3);  
 
                     case 2:
                         while (this->__check() == 2) {

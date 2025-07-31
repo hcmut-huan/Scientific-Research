@@ -58,6 +58,11 @@ int main(int argc, char** argv) {
         compressor.initialize(argc - 4, &argv[4]);
         compressor.run(timeseries);
     }
+    else if (ALGO == "conn-I-pla") {
+        ConnIPLA::Compression compressor(OUTPUT);
+        compressor.initialize(argc - 4, &argv[4]);
+        compressor.run(timeseries);
+    }
     else if (ALGO == "semi-optimal-pla") {
         SemiOptimalPLA::Compression compressor(OUTPUT);
         compressor.initialize(argc - 4, &argv[4]);

@@ -162,7 +162,7 @@ namespace SemiMixedPLA {
         return p;
     }
 
-    void OptimalPLA::approximate(Point2D p, double error) {    
+    void OptimalPLA::approximate(Point2D& p, double error) {    
         if (this->pivot == nullptr) {
             this->t_start = p.x;
             this->pivot = new Point2D(p.x, p.y);
@@ -379,7 +379,7 @@ namespace SemiMixedPLA {
         }
     }
 
-    int SemiOptimalPLA::approximate(Point2D point, double error) {
+    int SemiOptimalPLA::approximate(Point2D& point, double error) {
         this->buffer.push_back(point);
         Point2D p = this->buffer.front();
         this->buffer.pop_front();
@@ -471,7 +471,6 @@ namespace SemiMixedPLA {
             
             if (flag_1 != 0) this->semi_segs_1->makeSemiConnect(flag_1, this->error);
 
-            // int flag = 0;
             if (flag_1 == 3) {
                 if (this->semi_segs_1->seg_count > this->semi_segs_2->seg_count + 1) {
                     this->state = 3;

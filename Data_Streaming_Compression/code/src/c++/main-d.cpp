@@ -41,6 +41,11 @@ int main(int argc, char** argv) {
         decompressor.initialize();
         decompressor.run();
     }
+    else if (ALGO == "conn-I-pla") {
+        ConnIPLA::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
+        decompressor.initialize();
+        decompressor.run();
+    }
     else if (ALGO == "semi-optimal-pla") {
         SemiOptimalPLA::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
         decompressor.initialize();

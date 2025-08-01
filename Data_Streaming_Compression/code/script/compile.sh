@@ -11,11 +11,6 @@ for file in $(find "$WORK_DIR/src/c++/" -type f); do
     g++ -I "$WORK_DIR/include" -I "$WORK_DIR/lib" --std=c++11 -c "$file"
 done
 
-# cd "$WORK_DIR/bin/.o/"
-# g++ -I "$WORK_DIR/include" -I "$WORK_DIR/lib" --std=c++11 -c "$WORK_DIR/src/c++/piecewise-approximation/linear/conn-I-pla.cpp"
-# g++ -I "$WORK_DIR/include" -I "$WORK_DIR/lib" --std=c++11 -c "$WORK_DIR/src/c++/piecewise-approximation/linear/semi-optimal-pla.cpp"
-# g++ -I "$WORK_DIR/include" -I "$WORK_DIR/lib" --std=c++11 -c "$WORK_DIR/src/c++/piecewise-approximation/linear/semi-mixed-pla.cpp"
-
 
 cd "$WORK_DIR"/bin/
 g++ $(find $WORK_DIR/bin/.o/ -name "*.o" ! -name "main-c.o" ! -name "main-d.o" -type f | xargs) "$WORK_DIR"/bin/.o/main-c.o -o compress

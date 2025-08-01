@@ -223,6 +223,9 @@ namespace SemiOptimalPLA {
             std::vector<Point2D> l_points;
             std::vector<Point2D> window;
 
+            std::vector<std::pair<long, Line>> u_lines;
+            std::vector<std::pair<long, Line>> l_lines;
+
         public:
             long t_start = -1;
             long t_end = -1;
@@ -235,7 +238,7 @@ namespace SemiOptimalPLA {
 
             ~OptimalPLA();
 
-            void backward();
+            void reconstructCvx();
             Point2D shrink(OptimalPLA* prev_seg, double error);
             void extendBackward(OptimalPLA* prev_seg, double error);
             void updateExtrm();
@@ -287,7 +290,7 @@ namespace SemiMixedPLA {
     // Source paper: An online PLA algorithm with maximum error bound for generating optimal mixed‐segments
     // Source path: src/piecewise-approximation/linear/semi-mixed-pla.cpp
     class OptimalPLA {
-        public:
+        private:
             UpperHull u_cvx;
             LowerHull l_cvx;
             Point2D* pivot = nullptr;
@@ -295,19 +298,23 @@ namespace SemiMixedPLA {
             std::vector<Point2D> u_points;
             std::vector<Point2D> l_points;
 
+            std::vector<std::pair<long, Line>> u_lines;
+            std::vector<std::pair<long, Line>> l_lines;
+        
+        public:
             long t_start = -1;
             long t_end = -1;
             int status = 0; // 1 is up and -1 is down
             bool is_complete = false;
+            std::vector<Point2D> window;
 
             Line* extrm = nullptr;
             Line* u_line = nullptr;
             Line* l_line = nullptr;
-            std::vector<Point2D> window;
 
             ~OptimalPLA();
             
-            void backward();
+            void reconstructCvx();
             Point2D shrink(OptimalPLA* prev_seg, double error);
             void extendBackward(OptimalPLA* prev_seg, double error);
             void updateExtrm();

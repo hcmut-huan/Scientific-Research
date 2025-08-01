@@ -7,6 +7,7 @@ namespace SemiOptimalPLA {
         if (this->u_line != nullptr) delete this->u_line;
         if (this->l_line != nullptr) delete this->l_line;
         this->u_cvx.clear(); this->l_cvx.clear();
+        this->l_lines.clear(); this->u_lines.clear();
     }
 
     void OptimalPLA::updateExtrm() {
@@ -31,82 +32,53 @@ namespace SemiOptimalPLA {
         return true;
     }
 
+    void OptimalPLA::reconstructCvx() {
+        this->u_cvx.clear();
+        for (Point2D& p : this->u_points) {
+            if (p.x > this->t_end) break;
+            else this->u_cvx.append(p);
+        }
+
+        this->l_cvx.clear();
+        for (Point2D& p : this->l_points) {
+            if (p.x > this->t_end) break;
+            else this->l_cvx.append(p);
+        }
+    }
+
     Point2D OptimalPLA::shrink(OptimalPLA* prev_seg, double error) {
         Point2D last = this->popLast(true);
         this->t_end = last.x - 1;
 
-        Point2D last_u = this->u_cvx.at(this->u_cvx.size() - 1);
-        for (Point2D& p : this->u_points) {
-            if (p.x > last_u.x) this->u_cvx.append(p);
-        }
-
-        Point2D last_l = this->l_cvx.at(this->l_cvx.size() - 1);
-        for (Point2D& p : this->l_points) {
-            if (p.x > last_l.x) this->l_cvx.append(p);
-        }
-
         if (this->window.size() > 1) {
-            last_l = this->l_cvx.at(this->l_cvx.size() - 1);
-            if (this->window.back().x >= last_l.x) {
-                Line n_u_line = Line(INFINITY, 0);
-                for (int i=0; i<this->u_cvx.size(); i++) {
-                    Point2D p = this->u_cvx.at(i);
-                    if (p.x < last_l.x) {
-                        Line line = Line::line(p, last_l);
-                        if (line.get_slope() < n_u_line.get_slope()) {
-                            n_u_line = Line(line.get_slope(), line.get_intercept());
-                        }
-                    }
-                }
-                
-                if (n_u_line.get_slope() != INFINITY) {
-                    delete this->u_line;
-                    this->u_line = new Line(n_u_line.get_slope(), n_u_line.get_intercept());
-                }
+            if (last.x == this->l_lines.back().first) {
+                delete this->l_line;
+                this->l_lines.pop_back();
+                this->l_line = new Line(
+                    this->l_lines.back().second.get_slope(),
+                    this->l_lines.back().second.get_intercept()
+                );
             }
-
-            last_u = this->u_cvx.at(this->u_cvx.size() - 1);
-            if (this->window.back().x >= last_u.x) {
-                Line n_l_line = Line(-INFINITY, 0);
-                for (int i=0; i<this->l_cvx.size(); i++) {
-                    Point2D p = this->l_cvx.at(i);
-                    if (p.x < last_u.x) {
-                        Line line = Line::line(p, last_u);
-                        if (line.get_slope() > n_l_line.get_slope()) {
-                            n_l_line = Line(line.get_slope(), line.get_intercept());
-                        }
-                    }
-                }
-
-                if (n_l_line.get_slope() != -INFINITY) {
-                    delete this->l_line;
-                    this->l_line = new Line(n_l_line.get_slope(), n_l_line.get_intercept());
-                }
+            if (last.x == this->u_lines.back().first) {
+                delete this->u_line;
+                this->u_lines.pop_back();
+                this->u_line = new Line(
+                    this->u_lines.back().second.get_slope(),
+                    this->u_lines.back().second.get_intercept()
+                );
             }
-
             return last;
         }
         else {
             delete this->u_line; this->u_line = new Line(INFINITY, 0);
             delete this->l_line; this->l_line = new Line(-INFINITY, 0);
+            this->u_cvx.clear(); this->u_cvx.append(this->u_points.at(0));
+            this->l_cvx.clear(); this->l_cvx.append(this->l_points.at(0));
+
             this->extendBackward(prev_seg, error);
-            
+
             return last;
         }
-    }
-
-    void OptimalPLA::backward() {
-        Point2D first_u = this->u_cvx.at(0);
-        for (auto it = this->u_points.rbegin(); it != this->u_points.rend(); it++) {
-            if ((*it).x < first_u.x)
-                this->u_cvx.append_backward(*it);
-        }
-
-        Point2D first_l = this->l_cvx.at(0);
-        for (auto it = this->l_points.rbegin(); it != this->l_points.rend(); it++) {
-            if ((*it).x < first_l.x)
-                this->l_cvx.append_backward(*it);
-        }   
     }
 
     void OptimalPLA::extendBackward(OptimalPLA* prev_seg, double error) {
@@ -158,8 +130,6 @@ namespace SemiOptimalPLA {
         this->window.pop_back();
 
         if (flag) {
-            if (p.x == this->u_cvx.at(this->u_cvx.size() - 1).x) this->u_cvx.pop();
-            if (p.x == this->l_cvx.at(this->l_cvx.size() - 1).x) this->l_cvx.pop();
             if (p.x == this->u_points.back().x) this->u_points.pop_back();
             if (p.x == this->l_points.back().x) this->l_points.pop_back();
         }
@@ -192,6 +162,8 @@ namespace SemiOptimalPLA {
             this->l_cvx.append(Point2D(p.x, p.y + error));
             this->u_points.push_back(Point2D(p.x, p.y - error));
             this->l_points.push_back(Point2D(p.x, p.y + error));
+            this->u_lines.push_back(std::make_pair(p.x, Line(this->u_line->get_slope(), this->u_line->get_intercept())));
+            this->l_lines.push_back(std::make_pair(p.x, Line(this->l_line->get_slope(), this->l_line->get_intercept())));
         }
         else {
             if (this->l_line->subs(p.x) > p.y + error) {
@@ -246,10 +218,12 @@ namespace SemiOptimalPLA {
                 if (update_u) {
                     this->l_cvx.append(Point2D(p.x, p.y + error));
                     this->l_points.push_back(Point2D(p.x, p.y + error));
+                    this->u_lines.push_back(std::make_pair(p.x, Line(this->u_line->get_slope(), this->u_line->get_intercept())));
                 }
                 if (update_l) {
                     this->u_cvx.append(Point2D(p.x, p.y - error));
                     this->u_points.push_back(Point2D(p.x, p.y - error));
+                    this->l_lines.push_back(std::make_pair(p.x, Line(this->l_line->get_slope(), this->l_line->get_intercept())));
                 }
             }
         }
@@ -294,13 +268,13 @@ namespace SemiOptimalPLA {
                 this->buffer.push_front(p);
                 switch (this->__check()) {
                     case 3:
-                        this->seg_2->backward();
                         this->seg_2->status = -this->seg_1->status;
                         do {
                             Point2D shrink_point = this->seg_2->shrink(this->seg_1, this->error);
                             this->buffer.push_front(shrink_point);
                         } 
                         while(this->__check() == 3);  
+                        this->seg_2->reconstructCvx();
 
                     case 2:
                         while (this->__check() == 2) {
@@ -312,7 +286,6 @@ namespace SemiOptimalPLA {
                         Point2D inter = Line::intersection(*this->seg_1->extrm, *this->seg_2->extrm);
                         this->curr_end = new Point2D(inter.x, inter.y);
                         this->yield();
-
                         break;
                 }
 
@@ -366,25 +339,23 @@ namespace SemiOptimalPLA {
             this->buffer.push_front(p);
             switch (this->__check()) {
                 case 3:
-                    this->seg_2->backward();
                     this->seg_2->status = -this->seg_1->status;
                     do {
                         Point2D shrink_point = this->seg_2->shrink(this->seg_1, this->error);
                         this->buffer.push_front(shrink_point);
                     } 
-                    while(this->__check() == 3);  
+                    while(this->__check() == 3);
+                    this->seg_2->reconstructCvx();
 
                 case 2:
                     while (this->__check() == 2) {
                         this->seg_2->extendBackward(this->seg_1, this->error);
                     }
-
                 case 1:
                     this->seg_2->updateExtrm();
                     Point2D inter = Line::intersection(*this->seg_1->extrm, *this->seg_2->extrm);
                     this->curr_end = new Point2D(inter.x, inter.y);
                     this->yield();
-
                     break;
             }
 

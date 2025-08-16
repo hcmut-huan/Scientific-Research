@@ -43,6 +43,11 @@ int main(int argc, char** argv) {
         compressor.initialize(argc - 4, &argv[4]);
         compressor.run(timeseries);
     }
+    else if (ALGO == "cov-pla") {
+        CovariancePLA::Compression compressor(OUTPUT);
+        compressor.initialize(argc - 4, &argv[4]);
+        compressor.run(timeseries);
+    }
     else if (ALGO == "swing-filter") {
         SwingFilter::Compression compressor(OUTPUT);
         compressor.initialize(argc - 4, &argv[4]);

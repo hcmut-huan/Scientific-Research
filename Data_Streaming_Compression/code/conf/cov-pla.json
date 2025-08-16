@@ -1,0 +1,10 @@
+{
+    "data": "data/UCR-time-series/Fungi.csv",
+    "compress": "out/compress/fungi_cov-pla.bin",
+    "decompress": "out/decompress/fungi_cov-pla.csv",
+    "interval": 1,
+    "algorithm": {
+        "name": "cov-pla",
+        "error": 4.355
+    }
+}

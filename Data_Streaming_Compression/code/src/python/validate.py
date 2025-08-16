@@ -49,6 +49,10 @@ def validate(algo):
         if "error" not in algo:
             exit(Error.MISSING_PARAM.value)
 
+    elif algo["name"] == "cov-pla":
+        if "error" not in algo:
+            exit(Error.MISSING_PARAM.value)
+
     elif algo["name"] == "mix-piece":
         if "error" not in algo or "n_segment" not in algo: 
             exit(Error.MISSING_PARAM.value)
@@ -93,6 +97,8 @@ def parse(conf):
     elif algo["name"] == "swing-filter":
         print("{} {}".format(algo["name"], algo["error"]))
     elif algo["name"] == "slide-filter":
+        print("{} {}".format(algo["name"], algo["error"]))
+    elif algo["name"] == "cov-pla":
         print("{} {}".format(algo["name"], algo["error"]))
     elif algo["name"] == "mix-piece":
         print("{} {} {}".format(algo["name"], algo["error"], algo["n_segment"]))

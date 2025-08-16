@@ -99,6 +99,47 @@ namespace SlideFilter {
     };
 };
 
+namespace CovariancePLA {
+    // Source paper: Maximum error-bounded Piecewise Linear Representation for online stream approximation
+    // Source path: src/piecewise-approximation/linear/optimal-pla.cpp
+    class Compression : public BaseCompression {
+        private:
+            double error = 0;
+
+            double accumulate = 0;
+            double average_x = 0;
+            double average_y = 0;
+            long accumulate_square = 0;
+            Line* line = nullptr;
+            
+            UpperHull u_cvx;
+            LowerHull l_cvx;
+
+            int length = 0;
+
+            bool __error_bound_verify(Line& line);
+
+        protected:
+            void compress(Univariate* data) override;
+            BinObj* serialize() override;
+
+        public:
+            Compression(std::string output) : BaseCompression(output) {}      
+            void initialize(int count, char** params) override;
+            void finalize() override;
+    };
+
+    class Decompression : public BaseDecompression {
+        protected:
+            CSVObj* decompress() override;
+
+        public:
+            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
+            void initialize() override;
+            void finalize() override;
+    };
+};
+
 namespace OptimalPLA {
     // Source paper: Maximum error-bounded Piecewise Linear Representation for online stream approximation
     // Source path: src/piecewise-approximation/linear/optimal-pla.cpp
@@ -129,10 +170,6 @@ namespace OptimalPLA {
     };
 
     class Decompression : public BaseDecompression {
-        private:
-            long index = 0;
-            Point2D* prev_end = nullptr;
-
         protected:
             CSVObj* decompress() override;
 

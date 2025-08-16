@@ -26,6 +26,11 @@ int main(int argc, char** argv) {
         decompressor.initialize();
         decompressor.run();
     }
+    else if (ALGO == "cov-pla") {
+        CovariancePLA::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
+        decompressor.initialize();
+        decompressor.run();
+    }
     else if (ALGO == "swing-filter") {
         SwingFilter::Decompression decompressor(INPUT, OUTPUT, INTERVAL);
         decompressor.initialize();

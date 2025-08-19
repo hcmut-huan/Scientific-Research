@@ -307,7 +307,7 @@ namespace MixPiece {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -345,22 +345,22 @@ namespace MixPiece {
         return std::make_pair(base_obj, prev_obj);
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
         std::vector<Segment> segments;
 
         // Decompress part 1
-        int BBlocks = this->compress_data->getInt();
+        int BBlocks = compress_data->getInt();
         while (BBlocks-- > 0) {
-            float b = this->compress_data->getFloat();
-            int ABlocks = this->compress_data->getInt();
+            float b = compress_data->getFloat();
+            int ABlocks = compress_data->getInt();
             while (ABlocks-- > 0) {
-                float a = this->compress_data->getFloat();
-                int blocks = this->compress_data->getInt();
+                float a = compress_data->getFloat();
+                int blocks = compress_data->getInt();
                 long pivot = 0;
                 while (blocks-- > 0) {
-                    long time = pivot + VariableByteEncoding::decode(this->compress_data);
+                    long time = pivot + VariableByteEncoding::decode(compress_data);
                     segments.push_back(Segment(time, a, b));
                     pivot = time;
                 }
@@ -368,26 +368,26 @@ namespace MixPiece {
         }
 
         // Decompress part 2
-        int ABlocks = this->compress_data->getInt();
+        int ABlocks = compress_data->getInt();
         while (ABlocks-- > 0) {
-            float a = this->compress_data->getFloat();
-            int blocks = this->compress_data->getInt();
+            float a = compress_data->getFloat();
+            int blocks = compress_data->getInt();
             long pivot = 0;
             while (blocks-- > 0) {
-                float b = this->compress_data->getFloat();
-                long time = pivot + VariableByteEncoding::decode(this->compress_data);
+                float b = compress_data->getFloat();
+                long time = pivot + VariableByteEncoding::decode(compress_data);
                 segments.push_back(Segment(time, a, b));
                 pivot = time;
             }
         }
 
         // Decompress part 3
-        int r_blocks = this->compress_data->getInt();
+        int r_blocks = compress_data->getInt();
         long pivot = 0;
         while (r_blocks-- > 0) {
-            float a = this->compress_data->getFloat();
-            float b = this->compress_data->getFloat();
-            long time = pivot + VariableByteEncoding::decode(this->compress_data);
+            float a = compress_data->getFloat();
+            float b = compress_data->getFloat();
+            long time = pivot + VariableByteEncoding::decode(compress_data);
             segments.push_back(Segment(time, a, b));
             pivot = time;
         }

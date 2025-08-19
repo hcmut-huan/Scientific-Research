@@ -6,7 +6,7 @@
     "algorithm": {
         "name": "normal-equation",
         "error": 0.1698,
-        "mode": "accumulate",
+        "mode": "individual",
         "degree": 2
     }
 }

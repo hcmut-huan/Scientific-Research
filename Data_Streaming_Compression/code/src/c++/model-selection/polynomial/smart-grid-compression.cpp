@@ -442,7 +442,7 @@ namespace SmartGridCompression {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -450,7 +450,7 @@ namespace SmartGridCompression {
         // Do nothing
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 

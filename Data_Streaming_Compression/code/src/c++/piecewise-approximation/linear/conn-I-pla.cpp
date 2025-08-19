@@ -132,7 +132,6 @@ namespace ConnIPLA {
     }
 
     void Compression::finalize() {
-        // std::cout << "finalize!!!\n";
         if (!this->s_1->is_complete) {
             Line line = this->s_1->getLine();
             this->curr_end = new Point2D(this->index - 1, line.subs(this->index - 1));
@@ -173,7 +172,6 @@ namespace ConnIPLA {
 
     void Compression::compress(Univariate* data) {
         Point2D p(this->index++, data->get_value());
-        // std::cout << p.x << " " << p.y << "\n";
 
         if (this->phase == 0) {
             this->s_1 = new LinearSegment(Point2D(p.x, p.y-this->error), Point2D(p.x, p.y+this->error));
@@ -258,7 +256,7 @@ namespace ConnIPLA {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -266,10 +264,10 @@ namespace ConnIPLA {
         if (this->prev_end != nullptr) delete this->prev_end;
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         if (this->prev_end == nullptr) {
-            long start = VariableByteEncoding::decode(this->compress_data);;
-            float value = this->compress_data->getFloat();
+            long start = VariableByteEncoding::decode(compress_data);;
+            float value = compress_data->getFloat();
             this->prev_end = new Point2D(start, value);
 
             return nullptr;
@@ -278,8 +276,8 @@ namespace ConnIPLA {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        long length = VariableByteEncoding::decode(this->compress_data);
-        float value = this->compress_data->getFloat();
+        long length = VariableByteEncoding::decode(compress_data);
+        float value = compress_data->getFloat();
         Point2D* curr_end = new Point2D(this->prev_end->x + length, value);
         Line line = Line::line(*curr_end, *this->prev_end);
 

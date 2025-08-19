@@ -286,7 +286,8 @@ class ZigZagEncoding {
 
 class BatchIO {
     public:
-        static void write(std::string filename, IOObj* obj, bool append = false) {
+        static long write(std::string filename, IOObj* obj, bool append = false) {
+            long count = 0;
             std::ofstream file;
 
             if (!append) file.open(filename);
@@ -298,9 +299,12 @@ class BatchIO {
                 if (obj != nullptr) {
                     file << "\n";
                 }
+                count++;
             }
 
             file.close();
+
+            return count;
         }
 
         static CSVObj* readCSV(std::string filename) {
@@ -354,14 +358,18 @@ class IterIO {
             }
         }
 
-        void write(std::string data, bool endline = true) {
+        long write(std::string data, bool endline = true) {
             this->file << data;
             if (endline) {
                 this->file << "\n";
             }
+
+            return 1;
         }
 
-        void write(IOObj* obj, bool endline = true) {
+        long write(IOObj* obj, bool endline = true) {
+            long count = 0;
+
             while (obj != nullptr) {
                 this->file << obj->toStr();
                 if (endline) {
@@ -369,14 +377,22 @@ class IterIO {
                 }
 
                 obj = obj->getNext();
+                count++;
             }
+
+            return count;
         }
 
-        void writeBin(BinObj* obj) {
+        long writeBin(BinObj* obj) {
+            long count = 0;
+            
             while (obj != nullptr) {
                 this->file.write((char*) obj->serialize(), obj->getSize());
                 obj = (BinObj*) obj->getNext();
+                count++;
             }
+
+            return count;
         }
 
         CSVObj* readCSV() {

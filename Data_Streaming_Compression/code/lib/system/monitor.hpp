@@ -67,6 +67,7 @@ class Monitor {
 
 class Clock {
     private:
+        bool flag = true;
         int _counter = 0;
         double _avg_duration = 0; 
         long _max_duration = -1;
@@ -76,26 +77,29 @@ class Clock {
         
     public:
         void start() {
-            this->reset();
+            this->_counter = 0;
+            this->_avg_duration = 0;
+            this->_max_duration = -1;
             this->_start_pivot = high_resolution_clock::now();
             this->_tick_pivot = this->_start_pivot;
         }
 
-        void reset() {
-            this->_counter = 0;
-            this->_avg_duration = 0;
-            this->_max_duration = -1;
-        }
-
         void tick() {
-            high_resolution_clock::time_point curr = high_resolution_clock::now();
-            long duration = duration_cast<nanoseconds>(curr - this->_tick_pivot).count();
+            if (this->flag) {
+                this->_tick_pivot = high_resolution_clock::now();
+            }
+            else {
+                high_resolution_clock::time_point curr = high_resolution_clock::now();
+                long duration = duration_cast<nanoseconds>(curr - this->_tick_pivot).count();
 
-            this->_avg_duration = ((this->_counter) * this->_avg_duration + duration) / ((double) (this->_counter + 1));
-            this->_max_duration = duration > this->_max_duration ? duration : this->_max_duration;
+                this->_avg_duration = ((this->_counter) * this->_avg_duration + duration) / ((double) (this->_counter + 1));
+                this->_max_duration = duration > this->_max_duration ? duration : this->_max_duration;
 
-            this->_counter++;
-            this->_tick_pivot = curr;
+                this->_counter++;
+                this->_tick_pivot = curr;
+            }
+
+            this->flag = !this->flag;
         }
 
         double getAvgDuration() {

@@ -17,24 +17,30 @@
 #include "algebraic/sdlp.hpp"
 #include "timeseries.hpp"
 
+using namespace std::chrono;
 
 class BaseCompression {
     private:
-        Clock clock;
-        BinObj* currObj = nullptr;
-        IterIO* timeFile = nullptr;
-        IterIO* outputFile = nullptr;
-        
-    protected:
+        bool y_trigger = false;
         BinObj* headObj = nullptr;
+        BinObj* currObj = nullptr;
+        IterIO* comFile = nullptr;
 
+    protected:
         virtual void compress(Univariate* data) = 0;
         virtual BinObj* serialize() = 0;
 
         void yield() {
-            this->currObj->setNext(this->serialize());
-            this->currObj = (BinObj*) this->currObj->getNext();
-            this->clock.tick();
+            this->y_trigger = true;
+
+            if (this->headObj == nullptr) {
+                this->headObj = this->serialize();
+                this->currObj = this->headObj;
+            }
+            else {
+                this->currObj->setNext(this->serialize());
+                this->currObj = (BinObj*) this->currObj->getNext();
+            }
         }
 
     public:
@@ -42,44 +48,45 @@ class BaseCompression {
         virtual void finalize() = 0;
 
         BaseCompression(std::string output) {
-            this->headObj = new BinObj;
-            this->currObj = this->headObj;
-            this->outputFile = new IterIO(output, false);
-            this->timeFile = new IterIO(output + ".time", false);
+            this->comFile = new IterIO(output, false);
         }
 
         ~BaseCompression() {
+            // Write compression data
+            this->comFile->close();
             IOObj::clear(this->headObj);
-            this->outputFile->close();
-            delete this->outputFile;
-            this->timeFile->close();
-            delete this->timeFile;
         }
 
-        void run(TimeSeries& timeseries) {
-            this->clock.start();
-            this->headObj->put(((Univariate*) timeseries.get(0))->get_time());
+        void clear_buffer() {
+            IOObj::clear(this->headObj);
+            this->headObj = nullptr;
+            this->currObj = nullptr;
+        }
+
+        BinObj* process(Univariate* data) {
+            this->compress(data);
             
-            while (timeseries.hasNext()) {
-                Univariate* data = (Univariate*) timeseries.next();
-                this->compress(data);
+            if (this->y_trigger) {
+                this->y_trigger = false;
+                this->comFile->writeBin(this->headObj);
+
+                return this->headObj;
             }
+
+            return nullptr;
+        }
+
+        BinObj* complete() {
             this->finalize();
 
-            long total_time = this->clock.stop();
-            double avg_time = (double) total_time / (double) timeseries.size();
+            if (this->y_trigger) {
+                this->y_trigger = false;
+                this->comFile->writeBin(this->headObj);
 
-            // Profile average latency
-            std::cout << std::fixed << "Time taken for each data point (ns): " << avg_time << "\n";
-            std::cout << std::fixed << "Average latency (ns): " << this->clock.getAvgDuration() << "\n";
-            std::cout << std::fixed << "Max latency (ns): " << this->clock.getMaxDuration() << "\n";
-            
-            this->timeFile->write("Time taken for each data point (ns): " + std::to_string(avg_time));
-            this->timeFile->write("Average latency (ns): " + std::to_string(this->clock.getAvgDuration()));
-            this->timeFile->write("Max latency (ns): " + std::to_string(this->clock.getMaxDuration()));
+                return this->headObj;
+            }
 
-            // Write compression data
-            this->outputFile->writeBin(this->headObj);
+            return nullptr;
         }
 };
 

@@ -366,7 +366,7 @@ namespace OptimalPLA {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -374,69 +374,69 @@ namespace OptimalPLA {
         // Do nothing
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        int length = VariableByteEncoding::decode(this->compress_data);
-        float slp = this->compress_data->getFloat();
-        float intercept = this->compress_data->getFloat();
+        int length = VariableByteEncoding::decode(compress_data);
+        float slp = compress_data->getFloat();
+        float intercept = compress_data->getFloat();
 
-        // unsigned short embedded = this->compress_data->getShort();
+        // unsigned short embedded = compress_data->getShort();
         // int flag = embedded >> 13;
         // int length = embedded & (0xffff >> 3);
         // float slp = 0;
         // float intercept = 0;
 
         // if (flag == 0) {
-        //     slp = this->compress_data->getFloat();
-        //     intercept = this->compress_data->getFloat();
+        //     slp = compress_data->getFloat();
+        //     intercept = compress_data->getFloat();
         // }
         // else if (flag == 1) {
-        //     slp = this->compress_data->getFloat();
-        //     short value = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
+        //     slp = compress_data->getFloat();
+        //     short value = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
         //     Line line = Line::line(slp, Point2D(length, value));
         //     intercept = line.get_intercept();
         // }
         // else if (flag == 2) {
-        //     slp = this->compress_data->getFloat();
-        //     short value = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
+        //     slp = compress_data->getFloat();
+        //     short value = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
         //     Line line = Line::line(slp, Point2D(0, value));
         //     intercept = line.get_intercept();
         // }
         // else if (flag == 3) {
-        //     short root = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
-        //     double value = this->compress_data->getFloat();
+        //     short root = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
+        //     double value = compress_data->getFloat();
         //     Line line = Line::line(Point2D(root, 0), Point2D(length, value));
             
         //     slp = line.get_slope();
         //     intercept = line.get_intercept();
         // }
         // else if (flag == 4) {
-        //     short value_1 = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
-        //     short value_2 = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
+        //     short value_1 = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
+        //     short value_2 = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
         //     Line line = Line::line(Point2D(0, value_1), Point2D(length, value_2));
 
         //     slp = line.get_slope();
         //     intercept = line.get_intercept();
         // }
         // else if (flag == 5) {
-        //     short root = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
-        //     short value = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
+        //     short root = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
+        //     short value = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
         //     Line line = Line::line(Point2D(root, 0), Point2D(length, value));
 
         //     slp = line.get_slope();
         //     intercept = line.get_intercept();
         // }
         // else if (flag == 6) {
-        //     short root = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
-        //     short value = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(this->compress_data));
+        //     short root = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
+        //     short value = ZigZagEncoding::decode((unsigned short) VariableByteEncoding::decode(compress_data));
         //     Line line = Line::line(Point2D(root, 0), Point2D(0, value));
 
         //     slp = line.get_slope();
         //     intercept = line.get_intercept();
         // }
-        
+
         for (int i=0; i<length; i++) {
             if (base_obj == nullptr) {
                 base_obj = new CSVObj;

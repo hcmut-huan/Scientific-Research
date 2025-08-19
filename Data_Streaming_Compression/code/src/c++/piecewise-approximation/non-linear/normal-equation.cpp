@@ -133,8 +133,6 @@ namespace NormalEquation {
         this->error = atof(params[0]);
         this->mode = params[1];
         this->degree = atoi(params[2]);
-
-        this->headObj->put((unsigned char) this->degree);
     }
 
     void Compression::finalize() {
@@ -186,23 +184,23 @@ namespace NormalEquation {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
-        this->degree = (int) this->compress_data->getByte();        
+    void Decompression::initialize(int count, char** params) {
+        this->degree = atoi(params[2]);   
     }
 
     void Decompression::finalize() {
         // Do nothing
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        unsigned short length = this->compress_data->getShort();
+        unsigned short length = compress_data->getShort();
         float* coefficients = new float[this->degree+1];
 
         for (int i = 0; i <= this->degree; i++) {
-            coefficients[i] = this->compress_data->getFloat();
+            coefficients[i] = compress_data->getFloat();
         }
         Polynomial model(this->degree, coefficients);
 

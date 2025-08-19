@@ -20,25 +20,12 @@ DECOMPRESS=$(sed -n "3p" .temp)
 INTERVAL=$(sed -n "4p" .temp)
 ALGO=$(sed -n "5p" .temp)
 
-mkdir -p out/compress
-mkdir -p out/decompress
-rm -f .temp
-
-# Compressing phase
-echo -e "-------------------------"
-echo "Start compressing..."
-echo '' > $COMPRESS
-echo '' > $COMPRESS.mon
-echo '' > $COMPRESS.time
-bin/compress $DATA $COMPRESS $ALGO
-
-# Decompressing phase
-echo -e "\n-------------------------"
-echo "Start decompressing..."
-echo '' > $DECOMPRESS
-echo '' > $DECOMPRESS.mon
-echo '' > $DECOMPRESS.time
-bin/decompress $COMPRESS $DECOMPRESS $INTERVAL $ALGO
+# Runing phase
+echo "Start compressing streaming data... "
+mkdir -p out/compress out/decompress
+rm -f .statistic .mon .time .temp
+touch .mon .time
+bin/main $DATA $COMPRESS $DECOMPRESS $INTERVAL $ALGO
 
 # Statistic phase
 echo -e "\n-------------------------"
@@ -51,8 +38,7 @@ cat .statistic | while read line; do
     echo -n ,$(echo $line | awk -F ":" '{print $2}' | xargs) >> out/experiments.csv 
 done
 
-echo -n ,$(cat $COMPRESS.time | grep -oE '[0-9]+\.[0-9]+|[0-9]+' | paste -sd, -) >> out/experiments.csv
-echo ,$(cat $DECOMPRESS.time | grep -oE '[0-9]+\.[0-9]+|[0-9]+' | paste -sd, -) >> out/experiments.csv
-rm -f .statistic
+echo ,$(cat .time | grep -oE '[0-9]+\.[0-9]+|[0-9]+' | paste -sd, -) >> out/experiments.csv
+rm -f .statistic .mon .time .temp
 
 exit 0

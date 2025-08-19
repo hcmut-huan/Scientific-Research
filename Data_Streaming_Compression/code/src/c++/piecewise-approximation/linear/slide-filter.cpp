@@ -46,7 +46,7 @@ namespace SlideFilter {
                 double d_i = Line::intersection(*this->prev_g, s).x;     // d_i^k
                 double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
 
-                if ((c_i > f_i_k && d_i > f_i_k) || max_c_vs_d < p.x || f_i_k < p.x) return -1;
+                if ((c_i > f_i_k && d_i > f_i_k) || max_c_vs_d > p.x || f_i_k > p.x) return -1;
                 else if (c_i > f_i_k) return (d_i + f_i_k) / 2;
                 else if (d_i > f_i_k) return (c_i + f_i_k) / 2;
                 else return (max_c_vs_d + f_i_k) / 2;            
@@ -63,7 +63,7 @@ namespace SlideFilter {
                 double d_i = Line::intersection(*this->prev_g, q).x;   // d_i^k'
                 double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
                 
-                if ((c_i > f_i_k && d_i > f_i_k) || max_c_vs_d < p.x || f_i_k < p.x) return -1;
+                if ((c_i > f_i_k && d_i > f_i_k) || max_c_vs_d > p.x || f_i_k > p.x) return -1;
                 else if (c_i > f_i_k) return (d_i + f_i_k) / 2;
                 else if (d_i > f_i_k) return (c_i + f_i_k) / 2;
                 else return (max_c_vs_d + f_i_k) / 2;         
@@ -216,7 +216,7 @@ namespace SlideFilter {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -224,9 +224,9 @@ namespace SlideFilter {
         if (this->prev_end != nullptr) delete this->prev_end;
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         if (this->prev_end == nullptr) {
-            unsigned short start = this->compress_data->getShort();
+            unsigned short start = compress_data->getShort();
             float value = compress_data->getFloat();
             this->prev_end = new Point2D(start, value);
 
@@ -236,7 +236,7 @@ namespace SlideFilter {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        float delta = this->compress_data->getFloat();
+        float delta = compress_data->getFloat();
         if (delta > 0) {
             float value = compress_data->getFloat();
 

@@ -2,6 +2,7 @@
 #define BASE_DECOMPRESSION_HPP
 
 #include <map>
+#include <queue>
 #include <cmath>
 #include <vector>
 #include <iostream>
@@ -16,61 +17,46 @@
 #include "algebraic/function.hpp"
 #include "timeseries.hpp"
 
+using namespace std::chrono;
+
 class BaseDecompression {
     private:
-        Clock clock;
-        IterIO* timeFile = nullptr;
-        IterIO* outputFile = nullptr;
+        IterIO* decomFile = nullptr;
 
     protected:
         int interval = 0;
         time_t basetime = 0;
-        BinObj* compress_data = nullptr;
 
-        virtual CSVObj* decompress() = 0;
+        virtual CSVObj* decompress(BinObj* compress_data) = 0;
 
     public:
-        virtual void initialize() = 0;
+        virtual void initialize(int count, char** params) = 0;
         virtual void finalize() = 0;
 
-        BaseDecompression(std::string input, std::string output, int interval) {
+        BaseDecompression(std::string output, int interval, std::time_t basetime) {
             this->interval = interval;
-            this->outputFile = new IterIO(output, false);
-            this->timeFile = new IterIO(output + ".time", false);
-            
-            IterIO inputFile(input, true, true);
-            this->compress_data = inputFile.readBin();
-            inputFile.close();
+            this->basetime = basetime;
+            this->decomFile = new IterIO(output, false);
         }
 
-        ~BaseDecompression() {
-            IOObj::clear(compress_data);
-            this->outputFile->close();
-            delete this->outputFile;
-            this->timeFile->close();
-            delete this->timeFile;
+        ~BaseDecompression() {            
+            this->decomFile->close();
         }
 
-        void run() {
-            this->basetime = this->compress_data->getLong();
-            this->clock.start();
-            
-            while (this->compress_data->getSize() != 0) {
-                CSVObj* data = this->decompress();
+        long process(BinObj* obj) {
+            long length = 0;
+            while (obj->getSize() != 0) {
+                CSVObj* data = this->decompress(obj);
                 if (data != nullptr) {
-                    this->outputFile->write(data);
-                    IOObj::clear(data);
-                    this->clock.tick();
+                    length += this->decomFile->write(data);
                 }
             }
+
+            return length;
+        }
+
+        void complete() {
             this->finalize();
-
-            // Profile average latency
-            std::cout << std::fixed << "Average time taken for each segment (ns): " << this->clock.getAvgDuration() << "\n";
-            std::cout << std::fixed << "Max time taken for each segment (ns): " << this->clock.getMaxDuration() << "\n";
-
-            this->timeFile->write("Time taken for each segment (ns): " + std::to_string(this->clock.getAvgDuration()));
-            this->timeFile->write("Max time taken for each segment (ns): " + std::to_string(this->clock.getMaxDuration()));
         }
 };
 

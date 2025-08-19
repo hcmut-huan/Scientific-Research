@@ -526,7 +526,7 @@ namespace SemiMixedPLA {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -534,9 +534,9 @@ namespace SemiMixedPLA {
         if (this->prev_end != nullptr) delete this->prev_end;
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         if (this->prev_end == nullptr) {
-            float start = this->compress_data->getFloat();
+            float start = compress_data->getFloat();
             float value = compress_data->getFloat();
             this->prev_end = new Point2D(start, value);
 
@@ -546,7 +546,7 @@ namespace SemiMixedPLA {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        float delta = this->compress_data->getFloat();
+        float delta = compress_data->getFloat();
         if (delta > 0) {
             float value = compress_data->getFloat();
 

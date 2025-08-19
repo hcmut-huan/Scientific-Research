@@ -45,11 +45,11 @@ namespace NormalEquation {
             int degree = 0;
 
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
         
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {} 
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {} 
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };

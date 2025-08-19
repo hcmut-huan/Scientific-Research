@@ -102,7 +102,7 @@ namespace SwingFilter {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -110,10 +110,10 @@ namespace SwingFilter {
         if (this->prev_end != nullptr) delete this->prev_end;
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         if (this->prev_end == nullptr) {
-            long start = VariableByteEncoding::decode(this->compress_data);;
-            float value = this->compress_data->getFloat();
+            long start = VariableByteEncoding::decode(compress_data);;
+            float value = compress_data->getFloat();
             this->prev_end = new Point2D(start, value);
 
             return nullptr;
@@ -122,8 +122,8 @@ namespace SwingFilter {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        long length = VariableByteEncoding::decode(this->compress_data);
-        float value = this->compress_data->getFloat();
+        long length = VariableByteEncoding::decode(compress_data);
+        float value = compress_data->getFloat();
         Point2D* curr_end = new Point2D(this->prev_end->x + length, value);
         Line line = Line::line(*curr_end, *this->prev_end);
 

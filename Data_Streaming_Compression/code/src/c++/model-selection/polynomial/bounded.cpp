@@ -187,8 +187,6 @@ namespace Bounded {
                 coefficients[degree-i] = x(i);
             }
 
-
-
             std::vector<std::vector<double>> vecs(degree+1, std::vector<double>(3));
             for (int i=0; i<=degree; i++) {
                 vecs[i][0] = std::ceil(coefficients[degree-i]) - coefficients[degree-i];
@@ -227,9 +225,6 @@ namespace Bounded {
             total++;
             if (flag) count++;
 
-
-
-            
             if (this->func != nullptr) delete this->func;
             this->func = new Polynomial(degree, coefficients);
             delete coefficients;
@@ -460,7 +455,7 @@ namespace Bounded {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -468,7 +463,7 @@ namespace Bounded {
         // Do nothing
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 

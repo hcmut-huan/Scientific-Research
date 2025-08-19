@@ -162,7 +162,7 @@ namespace HybridPCA {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -170,12 +170,12 @@ namespace HybridPCA {
         // Do nothing
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        unsigned short length = this->compress_data->getShort();
-        float value = this->compress_data->getFloat();
+        unsigned short length = compress_data->getShort();
+        float value = compress_data->getFloat();
 
         for (int i=0; i<length; i++) {
             if (base_obj == nullptr) {

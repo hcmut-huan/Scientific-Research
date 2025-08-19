@@ -77,7 +77,7 @@ namespace CovariancePLA {
     // End: compression
 
     // Begin: decompression
-    void Decompression::initialize() {
+    void Decompression::initialize(int count, char** params) {
         // Do nothing
     }
 
@@ -85,13 +85,13 @@ namespace CovariancePLA {
         // Do nothing
     }
 
-    CSVObj* Decompression::decompress() {
+    CSVObj* Decompression::decompress(BinObj* compress_data) {
         CSVObj* base_obj = nullptr;
         CSVObj* prev_obj = nullptr;
 
-        int length = VariableByteEncoding::decode(this->compress_data);
-        float slp = this->compress_data->getFloat();
-        float intercept = this->compress_data->getFloat();
+        int length = VariableByteEncoding::decode(compress_data);
+        float slp = compress_data->getFloat();
+        float intercept = compress_data->getFloat();
         
         for (int i=0; i<length; i++) {
             if (base_obj == nullptr) {

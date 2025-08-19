@@ -37,11 +37,11 @@ namespace SwingFilter {
             Point2D* prev_end = nullptr;
 
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
 
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };
@@ -90,11 +90,11 @@ namespace SlideFilter {
             Point2D* prev_end = nullptr;
             
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
 
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };
@@ -131,11 +131,11 @@ namespace CovariancePLA {
 
     class Decompression : public BaseDecompression {
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
 
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };
@@ -171,11 +171,11 @@ namespace OptimalPLA {
 
     class Decompression : public BaseDecompression {
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
 
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };
@@ -238,11 +238,11 @@ namespace ConnIPLA {
             Point2D* prev_end = nullptr;
 
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
 
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };
@@ -314,11 +314,11 @@ namespace SemiOptimalPLA {
             Point2D* prev_end = nullptr;
 
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
 
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };
@@ -422,11 +422,11 @@ namespace SemiMixedPLA {
             Point2D* prev_end = nullptr;
             
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
 
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };
@@ -535,11 +535,11 @@ namespace MixPiece {
             std::pair<CSVObj*, CSVObj*> __decompress_segment(Segment& segment);
 
         protected:
-            CSVObj* decompress() override;
+            CSVObj* decompress(BinObj* compress_data) override;
 
         public:
-            Decompression(std::string input, std::string output, int interval) : BaseDecompression(input, output, interval) {}
-            void initialize() override;
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
             void finalize() override;
     };
 };

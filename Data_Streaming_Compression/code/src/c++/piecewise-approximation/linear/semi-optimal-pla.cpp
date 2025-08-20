@@ -319,49 +319,52 @@ namespace SemiOptimalPLA {
 
     void Compression::compress(Univariate* data) {
         this->buffer.push_back(Point2D(this->index++, data->get_value()));
-        Point2D p = this->buffer.front();
-        this->buffer.pop_front();
+        
+        while (this->buffer.size() != 0) {
+            Point2D p = this->buffer.front();
+            this->buffer.pop_front();
 
-        if (!this->seg_1->is_complete) { 
-            this->seg_1->approximate(p, this->error);
-            if (this->seg_1->is_complete) {
-                this->seg_1->updateExtrm();
-                this->curr_end = new Point2D(0, this->seg_1->extrm->subs(0));
-                this->yield();
-            }
-        }
-        if (this->seg_1->is_complete) {
-            this->seg_2->approximate(p, this->error);
-            if (this->seg_2->is_complete) this->seg_2->updateExtrm();
-        }
-
-        if (this->seg_1->is_complete && this->seg_2->is_complete) {
-            this->buffer.push_front(p);
-            switch (this->__check()) {
-                case 3:
-                    this->seg_2->status = -this->seg_1->status;
-                    do {
-                        Point2D shrink_point = this->seg_2->shrink(this->seg_1, this->error);
-                        this->buffer.push_front(shrink_point);
-                    } 
-                    while(this->__check() == 3);
-                    this->seg_2->reconstructCvx();
-
-                case 2:
-                    while (this->__check() == 2) {
-                        this->seg_2->extendBackward(this->seg_1, this->error);
-                    }
-                case 1:
-                    this->seg_2->updateExtrm();
-                    Point2D inter = Line::intersection(*this->seg_1->extrm, *this->seg_2->extrm);
-                    this->curr_end = new Point2D(inter.x, inter.y);
+            if (!this->seg_1->is_complete) { 
+                this->seg_1->approximate(p, this->error);
+                if (this->seg_1->is_complete) {
+                    this->seg_1->updateExtrm();
+                    this->curr_end = new Point2D(0, this->seg_1->extrm->subs(0));
                     this->yield();
-                    break;
+                }
+            }
+            if (this->seg_1->is_complete) {
+                this->seg_2->approximate(p, this->error);
+                if (this->seg_2->is_complete) this->seg_2->updateExtrm();
             }
 
-            delete this->seg_1;
-            this->seg_1 = this->seg_2;
-            this->seg_2 = new OptimalPLA();
+            if (this->seg_1->is_complete && this->seg_2->is_complete) {
+                this->buffer.push_front(p);
+                switch (this->__check()) {
+                    case 3:
+                        this->seg_2->status = -this->seg_1->status;
+                        do {
+                            Point2D shrink_point = this->seg_2->shrink(this->seg_1, this->error);
+                            this->buffer.push_front(shrink_point);
+                        } 
+                        while(this->__check() == 3);
+                        this->seg_2->reconstructCvx();
+
+                    case 2:
+                        while (this->__check() == 2) {
+                            this->seg_2->extendBackward(this->seg_1, this->error);
+                        }
+                    case 1:
+                        this->seg_2->updateExtrm();
+                        Point2D inter = Line::intersection(*this->seg_1->extrm, *this->seg_2->extrm);
+                        this->curr_end = new Point2D(inter.x, inter.y);
+                        this->yield();
+                        break;
+                }
+
+                delete this->seg_1;
+                this->seg_1 = this->seg_2;
+                this->seg_2 = new OptimalPLA();
+            }
         }
     }
     // End: compression

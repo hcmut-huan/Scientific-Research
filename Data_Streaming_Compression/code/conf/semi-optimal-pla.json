@@ -1,10 +1,10 @@
 {
-    "data": "data/UCR-time-series/Fungi.csv",
-    "compress": "out/compress/fungi_semi-optimal-pla.bin",
-    "decompress": "out/decompress/fungi_semi-optimal-pla.csv",
+    "data": "data/system-monitoring/mem-avail.csv",
+    "compress": "out/compress/mem-avail_semi-optimal-pla.bin",
+    "decompress": "out/decompress/mem-avail_semi-optimal-pla.csv",
     "interval": 1,
     "algorithm": {
         "name": "semi-optimal-pla",
-        "error": 4.355
+        "error": 0.3912
     }
 }

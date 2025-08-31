@@ -8,6 +8,7 @@ namespace SemiMixedPLA {
         if (this->l_line != nullptr) delete this->l_line;
         this->u_cvx.clear(); this->l_cvx.clear();
         this->l_lines.clear(); this->u_lines.clear();
+        this->u_mapper.clear(); this->l_mapper.clear();
     }
 
     void OptimalPLA::updateExtrm() {
@@ -17,14 +18,15 @@ namespace SemiMixedPLA {
 
     bool OptimalPLA::isSemiConnected(Line* line, double bound) {
         Point2D inter = Line::intersection(*line, *this->extrm);
-        
-        if (inter.x > this->t_end + 1 || inter.x < this->t_start) return false;
+        long start = this->status == -1 ? this->l_cvx.at(0).x : this->u_cvx.at(0).x;
+
+        if (inter.x > this->t_end + 1 || (std::abs(inter.x - start) > 0.0000001 && inter.x < start)) return false;
         else if (inter.x > this->t_end) return true;
 
-        int start = std::ceil(inter.x) - this->t_start;
-        for (int i=start; i<this->window.size(); i++) {
+        for (int i=window.size()-1; i>=0; i--) {
             Point2D p = this->window.at(i);
-            if (p.x > inter.x && std::abs(line->subs(p.x) - p.y) > bound) {
+            if (p.x < inter.x) break;
+            if (std::abs(line->subs(p.x) - p.y) - bound > 0.0000001) {
                 return false;
             }
         }
@@ -38,20 +40,28 @@ namespace SemiMixedPLA {
             if (p.x > this->t_end) break;
             else this->u_cvx.append(p);
         }
+        int u_length = this->u_mapper[this->window.size()-1];
+        this->u_cvx.erase_from_begin(this->u_cvx.size()-u_length);
 
         this->l_cvx.clear();
         for (Point2D& p : this->l_points) {
             if (p.x > this->t_end) break;
             else this->l_cvx.append(p);
         }
+        int l_length = this->l_mapper[this->window.size()-1];
+        this->l_cvx.erase_from_begin(this->l_cvx.size()-l_length);
     }
 
-    Point2D OptimalPLA::shrink(OptimalPLA* prev_seg, double error) {
+    std::pair<Point2D, bool> OptimalPLA::shrink(OptimalPLA* prev_seg, double error) {
         Point2D last = this->popLast(true);
         this->t_end = last.x - 1;
 
         if (this->window.size() > 1) {
+            bool update_u = false;
+            bool update_l = false;
+            
             if (last.x == this->l_lines.back().first) {
+                update_l = true;
                 delete this->l_line;
                 this->l_lines.pop_back();
                 this->l_line = new Line(
@@ -60,6 +70,7 @@ namespace SemiMixedPLA {
                 );
             }
             if (last.x == this->u_lines.back().first) {
+                update_u = true;
                 delete this->u_line;
                 this->u_lines.pop_back();
                 this->u_line = new Line(
@@ -67,7 +78,8 @@ namespace SemiMixedPLA {
                     this->u_lines.back().second.get_intercept()
                 );
             }
-            return last;
+
+            return std::make_pair(last, update_u | update_l);
         }
         else {
             delete this->u_line; this->u_line = new Line(INFINITY, 0);
@@ -75,22 +87,26 @@ namespace SemiMixedPLA {
             this->u_cvx.clear(); this->u_cvx.append(this->u_points.at(0));
             this->l_cvx.clear(); this->l_cvx.append(this->l_points.at(0));
 
-            this->extendBackward(prev_seg, error);
+            this->status = (last.y > this->u_line->subs(last.x)) ? 1 : -1;
+            Point2D new_p = this->extendBackward(prev_seg, error).first;
 
-            return last;
+            this->window.insert(this->window.begin(), new_p);
+            this->u_points.insert(this->u_points.begin(), Point2D(new_p.x, new_p.y-error));
+            this->l_points.insert(this->l_points.begin(), Point2D(new_p.x, new_p.y+error));
+
+            return std::make_pair(last, true);
         }
     }
 
-    void OptimalPLA::extendBackward(OptimalPLA* prev_seg, double error) {
+    std::pair<Point2D, bool> OptimalPLA::extendBackward(OptimalPLA* prev_seg, double error) {
         Point2D p = prev_seg->popLast(false);
         this->t_start = p.x;
-        this->window.insert(this->window.begin(), p);
 
-        bool update_l = this->window.size() == 2 ? true : p.y + error < this->l_line->subs(p.x);
-        bool update_u = this->window.size() == 2 ? true : p.y - error > this->u_line->subs(p.x);
+        bool update_l = this->window.size() == 1 ? true : this->status == -1 && this->l_line->subs(p.x) - p.y - error > 0.0000001;
+        bool update_u = this->window.size() == 1 ? true : this->status == 1 && p.y - error - this->u_line->subs(p.x) > 0.0000001;
 
         if (update_u) {
-            int index = 0;
+            int index = -1;
             for (int i=0; i<this->l_cvx.size(); i++) {
                 Line line = Line::line(this->l_cvx.at(i), Point2D(p.x, p.y - error));
                 if (line.get_slope() < this->u_line->get_slope()) {
@@ -99,11 +115,11 @@ namespace SemiMixedPLA {
                     this->u_line = new Line(line.get_slope(), line.get_intercept());
                 }
             }
-            if (index != this->l_cvx.size() - 1) this->l_cvx.erase_from_end(index + 1);
+            if (index >= 0 && index != this->l_cvx.size() - 1) this->l_cvx.erase_from_end(index + 1);
         }
-        
+
         if (update_l) {
-            int index = 0;
+            int index = -1;
             for (int i=0; i<this->u_cvx.size(); i++) {
                 Line line = Line::line(this->u_cvx.at(i), Point2D(p.x, p.y + error));
                 if (line.get_slope() > this->l_line->get_slope()) {
@@ -112,17 +128,18 @@ namespace SemiMixedPLA {
                     this->l_line = new Line(line.get_slope(), line.get_intercept());
                 }
             }
-            
-            if (index != this->u_cvx.size() - 1) this->u_cvx.erase_from_end(index + 1);
-            
-        }
 
+            
+            if (index >= 0 && index != this->u_cvx.size() - 1) this->u_cvx.erase_from_end(index + 1);
+        }
         if (update_u) {
             this->u_cvx.append_backward(Point2D(p.x, p.y - error));
         }
         if (update_l) {
             this->l_cvx.append_backward(Point2D(p.x, p.y + error));
         }
+
+        return std::make_pair(p, update_u | update_l);
     }
 
     Point2D OptimalPLA::popLast(bool flag) {
@@ -137,7 +154,7 @@ namespace SemiMixedPLA {
         return p;
     }
 
-    void OptimalPLA::approximate(Point2D& p, double error) {        
+    void OptimalPLA::approximate(Point2D& p, double error) {    
         if (this->pivot == nullptr) {
             this->t_start = p.x;
             this->pivot = new Point2D(p.x, p.y);
@@ -145,6 +162,9 @@ namespace SemiMixedPLA {
             this->l_cvx.append(Point2D(p.x, p.y + error));
             this->u_points.push_back(Point2D(p.x, p.y - error));
             this->l_points.push_back(Point2D(p.x, p.y + error));
+
+            this->u_mapper.push_back(1);
+            this->l_mapper.push_back(1);
         }
         else if (this->u_line == nullptr) {
             Line u_line = Line::line(
@@ -164,15 +184,18 @@ namespace SemiMixedPLA {
             this->l_points.push_back(Point2D(p.x, p.y + error));
             this->u_lines.push_back(std::make_pair(p.x, Line(this->u_line->get_slope(), this->u_line->get_intercept())));
             this->l_lines.push_back(std::make_pair(p.x, Line(this->l_line->get_slope(), this->l_line->get_intercept())));
+
+            this->u_mapper.push_back(2);
+            this->l_mapper.push_back(2);
         }
         else {
-            if (this->l_line->subs(p.x) > p.y + error) {
+            if (this->l_line->subs(p.x) - p.y - error > 0.0000001) {
                 this->t_end = p.x - 1;
                 this->status = -1;
                 this->is_complete = true;
                 return;
             }
-            else if (p.y - error > this->u_line->subs(p.x)) {
+            else if (p.y - error - this->u_line->subs(p.x) > 0.0000001) {
                 this->t_end = p.x - 1;
                 this->status = 1;
                 this->is_complete = true;
@@ -225,10 +248,18 @@ namespace SemiMixedPLA {
                     this->u_points.push_back(Point2D(p.x, p.y - error));
                     this->l_lines.push_back(std::make_pair(p.x, Line(this->l_line->get_slope(), this->l_line->get_intercept())));
                 }
+
+                this->u_mapper.push_back(this->u_cvx.size());
+                this->l_mapper.push_back(this->l_cvx.size());
             }
         }
 
         this->window.push_back(p);
+    }
+
+    void OptimalPLA::rconcate(std::vector<Point2D>& points) {
+        std::reverse(points.begin(), points.end());
+        this->window.insert(this->window.begin(), points.begin(), points.end());
     }
 
     int SemiOptimalPLA::__check(double error) {
@@ -237,9 +268,17 @@ namespace SemiMixedPLA {
             else if (this->seg_1->isSemiConnected(this->seg_2->u_line, error)) return 2;
             else return 3;
         }
-        else {
+        else if (this->seg_2->status == 1) {
             if (this->seg_1->isSemiConnected(this->seg_2->u_line, error)) return 1;
             else if (this->seg_1->isSemiConnected(this->seg_2->l_line, error)) return 2;
+            else return 3;
+        }
+        else {
+            bool u_semi = this->seg_1->isSemiConnected(this->seg_2->u_line, error);
+            bool l_semi = this->seg_1->isSemiConnected(this->seg_2->l_line, error);
+
+            if (u_semi && l_semi) return 1;
+            else if (u_semi || l_semi) return 2;
             else return 3;
         }
     }
@@ -269,13 +308,109 @@ namespace SemiMixedPLA {
         if (this->seg_1 != nullptr) delete this->seg_1;
         if (this->seg_2 != nullptr) delete this->seg_2;
         if (this->prev_end != nullptr) delete this->prev_end;
+        if (this->inter != nullptr) delete this->inter;
     }
 
-    void SemiOptimalPLA::finalize() {
-        Point2D last_point = this->seg_1->popLast(false);
-        
-        this->inter->put((float) (last_point.x - this->prev_end->x));
-        this->inter->put((float) (this->seg_1->extrm->subs(last_point.x)));
+    void SemiOptimalPLA::finalize(double error, long index) {
+        std::deque<Point2D> buffer;
+        this->seg_2->status = -1;
+        this->seg_2->t_end = index - 1;
+
+        if (this->seg_2->u_line != nullptr) {
+            int flag = this->__check(error);
+            switch (flag) {
+                case 3: {
+                    this->seg_2->status = -this->seg_1->status;
+                    this->seg_2->updateExtrm();
+                    do {
+                        std::pair<Point2D, bool> result = this->seg_2->shrink(this->seg_1, error);
+                        buffer.push_front(result.first);
+                        if (result.second) {
+                            flag = this->__check(error);
+                        }
+                    } 
+                    while(flag == 3);
+                    this->seg_2->reconstructCvx();
+                }
+                case 2: {
+                    std::vector<Point2D> extend_points;
+                    this->seg_2->updateExtrm();
+                    while (flag == 2) {
+                        std::pair<Point2D, bool> result = this->seg_2->extendBackward(this->seg_1, error);
+                        extend_points.push_back(result.first);
+                        if (result.second) {
+                            flag = this->__check(error);
+                        }
+                    }
+                    this->seg_2->rconcate(extend_points);
+                }
+                case 1: {
+                    this->seg_2->updateExtrm();
+                    Point2D inter_p = Line::intersection(*this->seg_1->extrm, *this->seg_2->extrm);
+                    this->inter->put((float) (inter_p.x - this->prev_end->x));
+                    this->inter->put((float) inter_p.y);
+                    
+
+                    delete this->prev_end;
+                    this->prev_end = new Point2D(inter_p.x, inter_p.y);
+                    break;
+                }
+            }
+
+            delete this->seg_1;
+            this->seg_1 = this->seg_2;
+            this->seg_2 = new OptimalPLA();
+        }
+
+        while (buffer.size() != 0) {
+            Point2D p = buffer.front();
+            buffer.pop_front(); 
+            this->seg_2->approximate(p, error);
+        }
+
+        if (this->seg_2->u_line == nullptr) {
+            Point2D last_point = this->seg_1->popLast(false);
+            Point2D inter_p(last_point.x, this->seg_1->extrm->subs(last_point.x));
+            this->inter->put((float) (inter_p.x - this->prev_end->x));
+            this->inter->put((float) inter_p.y);
+
+        }
+        else {
+            this->seg_2->is_complete = true;
+            this->seg_2->status = -1;
+
+            switch (this->__check(error)) {
+                case 2: {
+                    std::vector<Point2D> extend_points;
+                    this->seg_2->updateExtrm();
+                    
+                    do {
+                        std::pair<Point2D, bool> result = this->seg_2->extendBackward(this->seg_1, error);
+                        extend_points.push_back(result.first);
+                        if (result.second && this->__check(error) != 2) break;
+                    } 
+                    while (true);
+                    
+                    this->seg_2->rconcate(extend_points);
+                }
+                case 1: {
+                    this->seg_2->updateExtrm();
+                    Point2D inter_p = Line::intersection(*this->seg_1->extrm, *this->seg_2->extrm);
+                    this->inter->put((float) (inter_p.x - this->prev_end->x));
+                    this->inter->put((float) inter_p.y);
+
+                    delete this->prev_end;
+                    this->prev_end = new Point2D(inter_p.x, inter_p.y);
+                    break;
+                }
+            }
+
+            Point2D last_point = this->seg_2->popLast(false);
+            Point2D inter_p(last_point.x, this->seg_2->extrm->subs(last_point.x));
+            this->inter->put((float) (inter_p.x - this->prev_end->x));
+            this->inter->put((float) inter_p.y);
+
+        }
     }
 
     long SemiOptimalPLA::getLastEnd() {
@@ -307,6 +442,8 @@ namespace SemiMixedPLA {
             this->seg_2->l_line->get_intercept()
         );
         p_seg->updateExtrm();
+        p_seg->u_cvx = this->seg_2->u_cvx;
+        p_seg->l_cvx = this->seg_2->l_cvx;
         
         return p_seg;
     }
@@ -319,21 +456,36 @@ namespace SemiMixedPLA {
     }
 
     void SemiOptimalPLA::makeSemiConnect(int semi_case, double error) {
-        switch (semi_case) {
-            case 3:
-                this->seg_2->status = -this->seg_1->status;
-                do {
-                    Point2D shrink_point = this->seg_2->shrink(this->seg_1, error);
-                    this->buffer.push_front(shrink_point);
-                } 
-                while(this->__check(error) == 3);  
-                this->seg_2->reconstructCvx();
+        std::vector<Point2D> buffer;
+        int flag = semi_case;
 
-            case 2:
-                while (this->__check(error) == 2) {
-                    this->seg_2->extendBackward(this->seg_1, error);
+        switch (flag) {
+            case 3: {
+                this->seg_2->status = -this->seg_1->status;
+                this->seg_2->updateExtrm();
+                do {
+                    std::pair<Point2D, bool> result = this->seg_2->shrink(this->seg_1, error);
+                    buffer.push_back(result.first);
+                    if (result.second) {
+                        flag = this->__check(error);
+                    }
+                } 
+                while(flag == 3);  
+                this->seg_2->reconstructCvx();  
+            }
+            case 2: {                
+                std::vector<Point2D> extend_points;
+                this->seg_2->updateExtrm();
+                while (flag == 2) {
+                    std::pair<Point2D, bool> result = this->seg_2->extendBackward(this->seg_1, error);
+                    extend_points.push_back(result.first);
+                    if (result.second) {
+                        flag = this->__check(error);
+                    }
                 }
-            case 1:
+                this->seg_2->rconcate(extend_points);
+            }
+            case 1: {
                 this->seg_2->updateExtrm();
                 Point2D inter_p = Line::intersection(
                     *this->seg_1->extrm, *this->seg_2->extrm
@@ -345,24 +497,20 @@ namespace SemiMixedPLA {
                 delete this->prev_end;
                 this->prev_end = new Point2D(inter_p.x, inter_p.y);
                 break;
+            }
         }
 
         delete this->seg_1;
         this->seg_1 = this->seg_2;
         this->seg_2 = new OptimalPLA();
 
-        while (!this->buffer.empty()) {
-            Point2D p = this->buffer.front();
-            this->buffer.pop_front();
+        for (int i=buffer.size()-1; i>=0; i--) {
+            Point2D p = buffer.at(i);
             this->seg_2->approximate(p, error);
         }
     }
 
-    int SemiOptimalPLA::approximate(Point2D& point, double error) {
-        this->buffer.push_back(point);
-        Point2D p = this->buffer.front();
-        this->buffer.pop_front();
-
+    int SemiOptimalPLA::approximate(Point2D& p, double error) {
         if (!this->seg_1->is_complete) { 
             this->seg_1->approximate(p, error);
             if (this->seg_1->is_complete) {
@@ -400,7 +548,7 @@ namespace SemiMixedPLA {
 
     void Compression::finalize() {
         if (this->state == 0) {
-            this->semi_segs_1->finalize();
+            this->semi_segs_1->finalize(this->error, this->index);
         }
         if (this->state == 1) {
             if (this->semi_segs_1->seg_count > this->semi_segs_2->seg_count) {
@@ -408,7 +556,7 @@ namespace SemiMixedPLA {
                 this->semi_segs_1 = this->semi_segs_2;
             }
 
-            this->semi_segs_1->finalize();
+            this->semi_segs_1->finalize(this->error, this->index);
         }
         
         this->state = 1;
@@ -445,8 +593,9 @@ namespace SemiMixedPLA {
             }
         }
         if (this->state == 1) {
-            int flag_1 = this->semi_segs_1->approximate(p, this->error);
+            
             int flag_2 = this->semi_segs_2->approximate(p, this->error);
+            int flag_1 = this->semi_segs_1->approximate(p, this->error);
             
             if (flag_1 != 0) this->semi_segs_1->makeSemiConnect(flag_1, this->error);
 
@@ -462,8 +611,8 @@ namespace SemiMixedPLA {
                 }
             }
 
-            if (flag_2 != 0) this->semi_segs_2->makeSemiConnect(flag_2, this->error);
-
+            if (this->state != 2 && flag_2 != 0) this->semi_segs_2->makeSemiConnect(flag_2, this->error);
+        
             if (this->state == 2) {
                 this->yield();
                 this->state = 0;

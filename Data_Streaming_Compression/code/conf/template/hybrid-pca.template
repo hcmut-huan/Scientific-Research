@@ -1,0 +1,12 @@
+{
+    "data": "<DATA>",
+    "compress": "out/compress/<NAME>_pmc.bin",
+    "decompress": "out/decompress/<NAME>_pmc.csv",
+    "interval": <INTERVAL>,
+    "algorithm": {
+        "name": "hybrid-pca",
+        "error": <ERROR>,
+        "w_size": 40,
+        "n_window": 40
+    }
+}

@@ -1,10 +1,10 @@
 {
-    "data": "data/UCR-time-series/Fungi.csv",
-    "compress": "out/compress/fungi_conn-I-pla.bin",
-    "decompress": "out/decompress/fungi_conn-I-pla.csv",
+    "data": "data/power-grid/home-power.csv",
+    "compress": "out/compress/mem-avail_conn-I-pla.bin",
+    "decompress": "out/decompress/mem-avail_conn-I-pla.csv",
     "interval": 1,
     "algorithm": {
         "name": "conn-I-pla",
-        "error": 4.355
+        "error": 6.847
     }
 }

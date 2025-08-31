@@ -1,10 +1,10 @@
 {
-    "data": "data/UCR-time-series/Fungi.csv",
-    "compress": "out/compress/fungi_optimal-pla.bin",
-    "decompress": "out/decompress/fungi_optimal-pla.csv",
+    "data": "data/power-grid/home-power.csv",
+    "compress": "out/compress/mem-avail_optimal-pla.bin",
+    "decompress": "out/decompress/mem-avail_optimal-pla.csv",
     "interval": 1,
     "algorithm": {
         "name": "optimal-pla",
-        "error": 4.355
+        "error": 6.847
     }
 }

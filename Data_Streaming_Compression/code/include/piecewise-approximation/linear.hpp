@@ -83,9 +83,7 @@ namespace SlideFilter {
     };
 
     class Decompression : public BaseDecompression {
-        private:
-            const double EPSILON = 1e-6;
-            
+        private:            
             long index = 0;
             Point2D* prev_end = nullptr;
             
@@ -251,7 +249,7 @@ namespace SemiOptimalPLA {
     // Source paper: An Optimal Online Semi-Connected PLA Algorithm With Maximum Error Bound
     // Source path: src/piecewise-approximation/linear/semi-optimal-pla.cpp
     class OptimalPLA {
-        private:
+        public:
             UpperHull u_cvx;
             LowerHull l_cvx;
             Point2D* pivot = nullptr;
@@ -268,6 +266,8 @@ namespace SemiOptimalPLA {
             long t_end = -1;
             int status = 0; // 1 is up and -1 is down
             bool is_complete = false;
+            std::vector<int> u_mapper;
+            std::vector<int> l_mapper;
 
             Line* extrm = nullptr;
             Line* u_line = nullptr;
@@ -276,12 +276,13 @@ namespace SemiOptimalPLA {
             ~OptimalPLA();
 
             void reconstructCvx();
-            Point2D shrink(OptimalPLA* prev_seg, double error);
-            void extendBackward(OptimalPLA* prev_seg, double error);
+            std::pair<Point2D, bool> shrink(OptimalPLA* prev_seg, double error);
+            std::pair<Point2D, bool> extendBackward(OptimalPLA* prev_seg, double error);
             void updateExtrm();
             Point2D popLast(bool flag);
             bool isSemiConnected(Line* line, double bound);            
             void approximate(Point2D& p, double error);
+            void rconcate(std::vector<Point2D>& points);
     };
 
     class Compression : public BaseCompression {
@@ -290,7 +291,6 @@ namespace SemiOptimalPLA {
 
             OptimalPLA* seg_1 = nullptr;
             OptimalPLA* seg_2 = nullptr;
-            std::deque<Point2D> buffer;
 
             long index = 0;
             Point2D* prev_end = nullptr;
@@ -328,8 +328,7 @@ namespace SemiMixedPLA {
     // Source path: src/piecewise-approximation/linear/semi-mixed-pla.cpp
     class OptimalPLA {
         private:
-            UpperHull u_cvx;
-            LowerHull l_cvx;
+            
             Point2D* pivot = nullptr;
 
             std::vector<Point2D> u_points;
@@ -343,6 +342,11 @@ namespace SemiMixedPLA {
             long t_end = -1;
             int status = 0; // 1 is up and -1 is down
             bool is_complete = false;
+            
+            UpperHull u_cvx;
+            LowerHull l_cvx;
+            std::vector<int> u_mapper;
+            std::vector<int> l_mapper;
             std::vector<Point2D> window;
 
             Line* extrm = nullptr;
@@ -352,12 +356,13 @@ namespace SemiMixedPLA {
             ~OptimalPLA();
             
             void reconstructCvx();
-            Point2D shrink(OptimalPLA* prev_seg, double error);
-            void extendBackward(OptimalPLA* prev_seg, double error);
+            std::pair<Point2D, bool> shrink(OptimalPLA* prev_seg, double error);
+            std::pair<Point2D, bool> extendBackward(OptimalPLA* prev_seg, double error);
             void updateExtrm();
             Point2D popLast(bool flag);
             bool isSemiConnected(Line* line, double bound);            
             void approximate(Point2D& p, double error);
+            void rconcate(std::vector<Point2D>& points);
     };
 
     class SemiOptimalPLA {
@@ -368,7 +373,6 @@ namespace SemiMixedPLA {
             int seg_count = 0;
             OptimalPLA* seg_1 = nullptr;
             OptimalPLA* seg_2 = nullptr;
-            std::deque<Point2D> buffer;
 
             BinObj* inter = nullptr;
             Point2D* prev_end = nullptr;
@@ -377,7 +381,7 @@ namespace SemiMixedPLA {
             SemiOptimalPLA(OptimalPLA* p_seg, Point2D* p_point);
             ~SemiOptimalPLA();
 
-            void finalize();
+            void finalize(double error, long index);
             long getLastEnd();
             BinObj* getInter();
             OptimalPLA* getPendSeg();

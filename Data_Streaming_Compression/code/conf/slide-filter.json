@@ -1,10 +1,10 @@
 {
-    "data": "data/UCR-time-series/Fungi.csv",
-    "compress": "out/compress/fungi_slide-filter.bin",
-    "decompress": "out/decompress/fungi_slide-filter.csv",
+    "data": "data/system-monitoring/mem-avail.csv",
+    "compress": "out/compress/mem-avail_slide-filter.bin",
+    "decompress": "out/decompress/mem-avail_slide-filter.csv",
     "interval": 1,
     "algorithm": {
         "name": "slide-filter",
-        "error": 4.355
+        "error": 3.932
     }
 }

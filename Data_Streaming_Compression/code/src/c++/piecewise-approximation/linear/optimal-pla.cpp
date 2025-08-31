@@ -309,7 +309,7 @@ namespace OptimalPLA {
             this->l_cvx.append(Point2D(p.x, p.y + this->error));
         }
         else {
-            if (this->l_line->subs(p.x) > p.y + this->error || p.y - this->error > this->u_line->subs(p.x) || this->length > 8000) {
+            if (this->l_line->subs(p.x) - p.y - this->error > 0.0000001 || p.y - this->error - this->u_line->subs(p.x) > 0.0000001) {
                 this->length--;
                 this->yield();
                 

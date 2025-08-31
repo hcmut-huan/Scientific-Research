@@ -1,0 +1,10 @@
+{
+    "data": "<DATA>",
+    "compress": "out/compress/<NAME>_optimal-pla.bin",
+    "decompress": "out/decompress/<NAME>_optimal-pla.csv",
+    "interval": <INTERVAL>,
+    "algorithm": {
+        "name": "optimal-pla",
+        "error": <ERROR>
+    }
+}

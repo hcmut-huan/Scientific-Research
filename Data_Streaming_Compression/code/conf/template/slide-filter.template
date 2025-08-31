@@ -1,0 +1,10 @@
+{
+    "data": "<DATA>",
+    "compress": "out/compress/<NAME>_slide-filter.bin",
+    "decompress": "out/decompress/<NAME>_slide-filter.csv",
+    "interval": <INTERVAL>,
+    "algorithm": {
+        "name": "slide-filter",
+        "error": <ERROR>
+    }
+}

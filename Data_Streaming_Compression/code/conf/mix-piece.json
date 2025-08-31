@@ -1,11 +1,11 @@
 {
-    "data": "data/UCR-time-series/Crop.csv",
-    "compress": "out/compress/fungi_mix-piece.bin",
-    "decompress": "out/decompress/fungi_mix-piece.csv",
+    "data": "data/finance/JPXJPY.csv",
+    "compress": "out/compress/JPXJPY_mix-piece.bin",
+    "decompress": "out/decompress/JPXJPY_mix-piece.csv",
     "interval": 1,
     "algorithm": {
         "name": "mix-piece",
-        "error": 0.10325,
+        "error": 170.25,
         "n_segment": 1000000
     }
 }

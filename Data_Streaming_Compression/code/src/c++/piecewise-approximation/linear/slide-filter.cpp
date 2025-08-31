@@ -33,43 +33,55 @@ namespace SlideFilter {
     
     double Compression::__checkConnected() {
         double t_j_k = this->pivot->x;
-        Point2D p = Line::intersection(*this->u_line, *this->l_line);
-
-        if (this->prev_g->subs(p.x)>p.y) {
-            // point below g^{k-1}
-            double f_i_k = Line::intersection(*this->l_line, *this->prev_g).x;
-            if (f_i_k<t_j_k && this->l_line->subs(t_j_k-1)>prev_l->subs(t_j_k-1)) {
-                // find hyperplane s
-                Line s = Line::line(Point2D(t_j_k-1, this->prev_l->subs(t_j_k-1)), p);
-
-                double c_i = Line::intersection(*this->prev_g, *this->u_line).x;     // c_i^k
-                double d_i = Line::intersection(*this->prev_g, s).x;     // d_i^k
-                double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
-
-                if ((c_i > f_i_k && d_i > f_i_k) || max_c_vs_d > p.x || f_i_k > p.x) return -1;
-                else if (c_i > f_i_k) return (d_i + f_i_k) / 2;
-                else if (d_i > f_i_k) return (c_i + f_i_k) / 2;
-                else return (max_c_vs_d + f_i_k) / 2;            
+        Point2D prev = Line::intersection(*this->prev_l, *this->prev_u);
+        if (std::abs(this->u_line->get_slope() - this->l_line->get_slope()) < 0.0000001) {
+            Point2D p = Line::intersection(*this->u_line, *this->prev_g);
+            
+            if (p.x < t_j_k && p.x > prev.x 
+                && this->prev_l->subs(p.x) > p.y 
+                && p.y > this->prev_u->subs(p.x)) {
+                    
+                return p.x;
             }
         }
-        else if (p.y>this->prev_g->subs(p.x)) {
-            // point above g^{k-1}
-            double f_i_k = Line::intersection(*this->u_line, *this->prev_g).x;                          
-            if (f_i_k<t_j_k && this->prev_u->subs(t_j_k-1)>this->u_line->subs(t_j_k-1)) {
-                // find hyperplane q
-                Line q = Line::line(Point2D(t_j_k-1, this->prev_u->subs(t_j_k-1)), p);
+        else { 
+            Point2D p = Line::intersection(*this->u_line, *this->l_line);
+            if (this->prev_g->subs(p.x)>p.y) {
+                // point below g^{k-1}
+                double f_i_k = Line::intersection(*this->l_line, *this->prev_g).x;
+                if (f_i_k<t_j_k && this->l_line->subs(t_j_k-1)>prev_l->subs(t_j_k-1)) {
+                    // find hyperplane s
+                    Line s = Line::line(Point2D(t_j_k-1, this->prev_l->subs(t_j_k-1)), p);
 
-                double c_i = Line::intersection(*this->prev_g, *this->l_line).x;   // c_i^k'
-                double d_i = Line::intersection(*this->prev_g, q).x;   // d_i^k'
-                double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
-                
-                if ((c_i > f_i_k && d_i > f_i_k) || max_c_vs_d > p.x || f_i_k > p.x) return -1;
-                else if (c_i > f_i_k) return (d_i + f_i_k) / 2;
-                else if (d_i > f_i_k) return (c_i + f_i_k) / 2;
-                else return (max_c_vs_d + f_i_k) / 2;         
+                    double c_i = Line::intersection(*this->prev_g, *this->u_line).x;     // c_i^k
+                    double d_i = Line::intersection(*this->prev_g, s).x;     // d_i^k
+                    double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
+
+                    if ((c_i - f_i_k > 0.0000001 && d_i - f_i_k > 0.0000001) || max_c_vs_d - p.x > 0.0000001 || f_i_k - p.x > 0.0000001) return -1;
+                    else if (c_i - f_i_k > 0.0000001 && d_i - prev.x > 0.0000001) return (d_i + f_i_k) / 2;
+                    else if (d_i - f_i_k > 0.0000001 && c_i - prev.x > 0.0000001) return (c_i + f_i_k) / 2;
+                    else return (max_c_vs_d + f_i_k) / 2;            
+                }
+            }
+            else if (p.y>this->prev_g->subs(p.x)) {
+                // point above g^{k-1}
+                double f_i_k = Line::intersection(*this->u_line, *this->prev_g).x;                          
+                if (f_i_k<t_j_k && this->prev_u->subs(t_j_k-1)>this->u_line->subs(t_j_k-1)) {
+                    // find hyperplane q
+                    Line q = Line::line(Point2D(t_j_k-1, this->prev_u->subs(t_j_k-1)), p);
+
+                    double c_i = Line::intersection(*this->prev_g, *this->l_line).x;   // c_i^k'
+                    double d_i = Line::intersection(*this->prev_g, q).x;   // d_i^k'
+                    double max_c_vs_d = (c_i > d_i) ? c_i : d_i;
+
+                    if ((c_i - f_i_k > 0.0000001 && d_i - f_i_k > 0.0000001) || max_c_vs_d - p.x > 0.0000001 || f_i_k - p.x > 0.0000001) return -1;
+                    else if (c_i - f_i_k > 0.0000001 && d_i - prev.x > 0.0000001) return (d_i + f_i_k) / 2;
+                    else if (d_i - f_i_k > 0.0000001 && c_i - prev.x > 0.0000001) return (c_i + f_i_k) / 2;
+                    else return (max_c_vs_d + f_i_k) / 2;         
+                }
             }
         }
-        
+
         return -1;
     }
 
@@ -92,6 +104,7 @@ namespace SlideFilter {
     }
 
     BinObj* Compression::serialize() {
+        if (this->u_line == nullptr) return nullptr;
         BinObj* obj = new BinObj;
 
         if (this->segment_pos == 0) {           
@@ -109,12 +122,8 @@ namespace SlideFilter {
         else {
             double connected_endpoint = this->__checkConnected();
             if (connected_endpoint == -1) {
-                // Line g_k = this->__fit(); 
-                Line g_k(
-                    this->u_line->get_slope() / 2 + this->l_line->get_slope() / 2,
-                    this->u_line->get_intercept() / 2 + this->l_line->get_intercept() / 2
-                );
-
+                Line g_k = this->__fit(); 
+            
                 obj->put((float) (this->prev_end->x - this->pivot->x));
                 obj->put((float) this->prev_g->subs(this->pivot->x));
                 obj->put((float) g_k.subs(this->pivot->x));
@@ -180,6 +189,8 @@ namespace SlideFilter {
 
                 this->pivot->x = p.x; this->pivot->y = p.y;
                 this->cvx.append(p);
+                this->segments.clear();
+                this->segments.push_back(p);
             }
             else {
                 cvx.append(p);
@@ -246,7 +257,7 @@ namespace SlideFilter {
             delete this->prev_end;
             this->prev_end = curr_end;
 
-            for (long i=this->index; i<=curr_end->x+EPSILON; i++) {
+            for (long i=this->index; curr_end->x - i > 0.0000001 || std::abs(curr_end->x - i) < 0.0000001; i++) {
                 if (base_obj == nullptr) {
                     base_obj = new CSVObj;
                     base_obj->pushData(std::to_string(this->basetime + i * interval));

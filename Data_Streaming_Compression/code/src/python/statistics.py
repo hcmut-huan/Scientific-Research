@@ -55,7 +55,7 @@ def mae(origin_data, approx_data):
 
 def maxdiff(origin_data, approx_data):
     index = np.argmax(np.abs(origin_data - approx_data))
-    return np.max(np.abs(origin_data - approx_data)) #, index, origin_data[index], approx_data[index]
+    return np.max(np.abs(origin_data - approx_data)) , index, origin_data[index], approx_data[index]
 
 
 def mindiff(origin_data, approx_data):

@@ -1,0 +1,11 @@
+{
+    "data": "<DATA>",
+    "compress": "out/compress/<NAME>_smart-grid-compression.bin",
+    "decompress": "out/decompress/<NAME>_smart-grid-compression.csv",
+    "interval": <INTERVAL>,
+    "algorithm": {
+        "name": "smart-grid-compression",
+        "error": <ERROR>,
+        "degree": 3
+    }
+}

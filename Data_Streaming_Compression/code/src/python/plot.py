@@ -20,7 +20,7 @@ def load(file, index):
 
 
 def plot(s, e, label, time, data):
-    plt.figure(figsize=(16, 8))
+    plt.figure(figsize=(30, 8))
 
     for i in range(len(label)):
         plt.plot(time[i][s:e], data[i][s:e], label=label[i])
@@ -38,8 +38,9 @@ if __name__ == "__main__":
         y.append(value)
 
     SIZE = len(x[0])
-    INTERVAL = 1000
+    INTERVAL = 10000
 
+    plot(0, SIZE, label, x, y)
     start = 0
     while start < SIZE:
         plot(start, start+INTERVAL, label, x, y)

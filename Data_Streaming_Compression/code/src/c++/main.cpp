@@ -105,32 +105,48 @@ int main(int argc, char** argv) {
     Clock decom_clock;
     while (data_stream.hasNext()) {
         Univariate* data = (Univariate*) data_stream.next();
+        // std::cout << data->get_time() << "\n";
 
         com_clock.tick();
         time_stream.push(high_resolution_clock::now());
+        // std::cout << "begin com " << time_stream.size() << "\n";
         BinObj* obj = compressor->process(data);
+        // std::cout << "wtf -> " << (obj == nullptr) << "\n";
         com_clock.tick();
 
         while (obj != nullptr) {
             decom_clock.tick();
             high_resolution_clock::time_point curr_time = high_resolution_clock::now();
             long length = decompressor->process(obj);
+            // std::cout << "length: " << length << " size: " << time_stream.size() << "\n";
 
-            if (length > 0) {
+            if (length > 0 && time_stream.size() > 0) {
                 for (int i=0; i<length; i++) {
                     long latency = duration_cast<nanoseconds>(curr_time - time_stream.front()).count();
                     sum_latency += latency;
                     max_latency = max_latency < latency ? latency : max_latency;
-                     
+                    
                     time_stream.pop();
+                    // if (time_stream.size() == 0) {
+                    //     length = i + 1;
+                    //     break;
+                    // } 
                 }
             }
 
             count += length;
             decom_clock.tick();
+            // int size = obj->getSize();
+            // if (size > 0) {
+            //     float delta = obj->getFloat();
+            //     std::cout << "delta: " << delta << " " << size << "\n";
+            // }
+            
             obj = (BinObj*) obj->getNext();
         }
+        // std::cout << "begin clear\n";
         compressor->clear_buffer();
+        // std::cout << "after clear\n";
     }
 
     // Finalizing
@@ -146,10 +162,11 @@ int main(int argc, char** argv) {
                 sum_latency += latency;
                 max_latency = max_latency < latency ? latency : max_latency;
                     
+                // time_stream.erase(time_stream.begin());
                 time_stream.pop();
             }
         }
-
+        
         count += length;
         decom_clock.tick();
         obj = (BinObj*) obj->getNext();

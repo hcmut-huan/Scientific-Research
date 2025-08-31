@@ -1,0 +1,11 @@
+{
+    "data": "<DATA>",
+    "compress": "out/compress/<NAME>_pmc.bin",
+    "decompress": "out/decompress/<NAME>_pmc.csv",
+    "interval": <INTERVAL>,
+    "algorithm": {
+        "name": "pmc",
+        "error": <ERROR>,
+        "mode": "midrange"
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "data": "<DATA>",
+    "compress": "out/compress/<NAME>_mix-piece.bin",
+    "decompress": "out/decompress/<NAME>_mix-piece.csv",
+    "interval": <INTERVAL>,
+    "algorithm": {
+        "name": "mix-piece",
+        "error": <ERROR>,
+        "n_segment": 1000000
+    }
+}

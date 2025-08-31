@@ -46,6 +46,7 @@ class BaseDecompression {
         long process(BinObj* obj) {
             long length = 0;
             while (obj->getSize() != 0) {
+                // std::cout << obj->getSize() << "\n";
                 CSVObj* data = this->decompress(obj);
                 if (data != nullptr) {
                     length += this->decomFile->write(data);

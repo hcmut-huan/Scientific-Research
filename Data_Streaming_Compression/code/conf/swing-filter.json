@@ -1,10 +1,10 @@
 {
-    "data": "data/UCR-time-series/Fungi.csv",
-    "compress": "out/compress/fungi_swing-filter.bin",
-    "decompress": "out/decompress/fungi_swing-filter.csv",
+    "data": "data/IoT-sensor/wind.csv",
+    "compress": "out/compress/mem-avail_swing-filter.bin",
+    "decompress": "out/decompress/mem-avail_swing-filter.csv",
     "interval": 1,
     "algorithm": {
         "name": "swing-filter",
-        "error": 4.355
+        "error":0.32
     }
 }

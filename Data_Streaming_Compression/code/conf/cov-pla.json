@@ -1,10 +1,10 @@
 {
-    "data": "data/UCR-time-series/Fungi.csv",
-    "compress": "out/compress/fungi_cov-pla.bin",
-    "decompress": "out/decompress/fungi_cov-pla.csv",
+    "data": "data/IoT-sensor/wind.csv",
+    "compress": "out/compress/mem-avail_cov-pla.bin",
+    "decompress": "out/decompress/mem-avail_cov-pla.csv",
     "interval": 1,
     "algorithm": {
-        "name": "cov-pla",
-        "error": 4.355
+        "name": "optimal-pla",
+        "error": 0.32
     }
 }

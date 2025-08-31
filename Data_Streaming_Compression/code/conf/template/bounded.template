@@ -1,0 +1,11 @@
+{
+    "data": "<DATA>",
+    "compress": "out/compress/<NAME>_bounded.bin",
+    "decompress": "out/decompress/<NAME>_bounded.csv",
+    "interval": <INTERVAL>,
+    "algorithm": {
+        "name": "bounded",
+        "error": <ERROR>,
+        "degree": 3
+    }
+}

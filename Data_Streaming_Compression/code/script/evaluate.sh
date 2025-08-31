@@ -3,9 +3,7 @@
 DIR="data/*/"
 FILES=$(find data/*/ -type f)
 INTERVAL=1
-# ALGORITHMS="semi-mixed-pla"
-ALGORITHMS="slide-filter"
-# ALGORITHMS="conn-I-pla cov-pla optimal-pla swing-filter"
+ALGORITHMS="conn-I-pla cov-pla optimal-pla swing-filter slide-filter semi-optimal-pla semi-mixed-pla"
 
 declare -A ERROR_MAPPER
 ERROR_MAPPER["humi"]="0.92 2.3 4.6 6.9 9.2"
@@ -37,13 +35,12 @@ for ALGO in $ALGORITHMS; do
             read -a ERROR <<< ${ERROR_MAPPER["$NAME"]}
 
             sed "s|<DATA>|$FILE|g; s|<NAME>|$NAME|g; s|<INTERVAL>|$INTERVAL|g; s|<ERROR>|${ERROR[$INDEX]}|g" "conf/template/$ALGO.template" > "conf/$ALGO.json"
-            for i in {0..0}; do
+            for i in {0..9}; do
                 echo ""
                 echo "###############"
                 echo "Compress $NAME with ERROR=${ERROR[$INDEX]}"
                 echo "###############"
                 echo ""
-                echo "$ALGO compresses $NAME with ERROR=${ERROR[$INDEX]}" >> out/experiments.csv
                 script/run.sh conf/$ALGO.json
 
                 if [[ $? -ne 0 ]]; then

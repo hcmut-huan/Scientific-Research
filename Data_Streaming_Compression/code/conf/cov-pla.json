@@ -1,10 +1,10 @@
 {
-    "data": "data/system-monitoring/mem-avail.csv",
-    "compress": "out/compress/mem-avail_cov-pla.bin",
-    "decompress": "out/decompress/mem-avail_cov-pla.csv",
+    "data": "data/automobile/EV-power.csv",
+    "compress": "out/compress/EV-power_cov-pla.bin",
+    "decompress": "out/decompress/EV-power_cov-pla.csv",
     "interval": 1,
     "algorithm": {
         "name": "cov-pla",
-        "error": 3.932
+        "error": 1.3
     }
 }

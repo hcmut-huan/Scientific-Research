@@ -1,10 +1,10 @@
 {
-    "data": "data/power-grid/home-power.csv",
-    "compress": "out/compress/home-power_conn-I-pla.bin",
-    "decompress": "out/decompress/home-power_conn-I-pla.csv",
+    "data": "data/automobile/EV-power.csv",
+    "compress": "out/compress/EV-power_conn-I-pla.bin",
+    "decompress": "out/decompress/EV-power_conn-I-pla.csv",
     "interval": 1,
     "algorithm": {
         "name": "conn-I-pla",
-        "error": 0.685
+        "error": 1.3
     }
 }

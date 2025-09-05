@@ -1,7 +1,7 @@
 {
-    "data": "data/automobile/test.csv",
-    "compress": "out/compress/mem-avail_optimal-pla.bin",
-    "decompress": "out/decompress/mem-avail_optimal-pla.csv",
+    "data": "data/automobile/EV-power.csv",
+    "compress": "out/compress/EV-power_optimal-pla.bin",
+    "decompress": "out/decompress/EV-power_optimal-pla.csv",
     "interval": 1,
     "algorithm": {
         "name": "optimal-pla",

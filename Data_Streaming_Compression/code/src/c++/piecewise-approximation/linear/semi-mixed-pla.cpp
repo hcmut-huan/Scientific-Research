@@ -287,6 +287,7 @@ namespace SemiMixedPLA {
         this->seg_1 = new OptimalPLA;
         this->seg_2 = new OptimalPLA;
         this->inter = new BinObj;
+        this->seg_count = 0;
     }
 
     SemiOptimalPLA::SemiOptimalPLA(OptimalPLA* p_seg, Point2D* p_point) {
@@ -302,6 +303,7 @@ namespace SemiMixedPLA {
 
         this->prev_end = new Point2D(this->seg_1->t_start, value);
         this->seg_count = 1;
+        delete p_point;
     }
 
     SemiOptimalPLA::~SemiOptimalPLA() {
@@ -312,7 +314,6 @@ namespace SemiMixedPLA {
     }
 
     void SemiOptimalPLA::finalize(double error, long index) {
-        std::deque<Point2D> buffer;
         this->seg_2->status = -1;
         this->seg_2->t_end = index - 1;
 
@@ -320,17 +321,15 @@ namespace SemiMixedPLA {
             int flag = this->__check(error);
             switch (flag) {
                 case 3: {
-                    this->seg_2->status = -this->seg_1->status;
                     this->seg_2->updateExtrm();
-                    do {
-                        std::pair<Point2D, bool> result = this->seg_2->shrink(this->seg_1, error);
-                        buffer.push_front(result.first);
-                        if (result.second) {
-                            flag = this->__check(error);
-                        }
-                    } 
-                    while(flag == 3);
-                    this->seg_2->reconstructCvx();
+                    Point2D inter_p(this->seg_2->t_start, this->seg_2->extrm->subs(this->seg_2->t_start));
+                    this->inter->put((float) (this->prev_end->x - inter_p.x));
+                    this->inter->put((float) this->seg_1->extrm->subs(this->seg_2->t_start));
+                    this->inter->put((float) inter_p.y);
+
+                    delete this->prev_end;
+                    this->prev_end = new Point2D(inter_p.x, inter_p.y);
+                    break;
                 }
                 case 2: {
                     std::vector<Point2D> extend_points;
@@ -350,7 +349,6 @@ namespace SemiMixedPLA {
                     this->inter->put((float) (inter_p.x - this->prev_end->x));
                     this->inter->put((float) inter_p.y);
                     
-
                     delete this->prev_end;
                     this->prev_end = new Point2D(inter_p.x, inter_p.y);
                     break;
@@ -362,54 +360,11 @@ namespace SemiMixedPLA {
             this->seg_2 = new OptimalPLA();
         }
 
-        while (buffer.size() != 0) {
-            Point2D p = buffer.front();
-            buffer.pop_front(); 
-            this->seg_2->approximate(p, error);
-        }
-
         if (this->seg_2->u_line == nullptr) {
             Point2D last_point = this->seg_1->popLast(false);
             Point2D inter_p(last_point.x, this->seg_1->extrm->subs(last_point.x));
             this->inter->put((float) (inter_p.x - this->prev_end->x));
             this->inter->put((float) inter_p.y);
-
-        }
-        else {
-            this->seg_2->is_complete = true;
-            this->seg_2->status = -1;
-
-            switch (this->__check(error)) {
-                case 2: {
-                    std::vector<Point2D> extend_points;
-                    this->seg_2->updateExtrm();
-                    
-                    do {
-                        std::pair<Point2D, bool> result = this->seg_2->extendBackward(this->seg_1, error);
-                        extend_points.push_back(result.first);
-                        if (result.second && this->__check(error) != 2) break;
-                    } 
-                    while (true);
-                    
-                    this->seg_2->rconcate(extend_points);
-                }
-                case 1: {
-                    this->seg_2->updateExtrm();
-                    Point2D inter_p = Line::intersection(*this->seg_1->extrm, *this->seg_2->extrm);
-                    this->inter->put((float) (inter_p.x - this->prev_end->x));
-                    this->inter->put((float) inter_p.y);
-
-                    delete this->prev_end;
-                    this->prev_end = new Point2D(inter_p.x, inter_p.y);
-                    break;
-                }
-            }
-
-            Point2D last_point = this->seg_2->popLast(false);
-            Point2D inter_p(last_point.x, this->seg_2->extrm->subs(last_point.x));
-            this->inter->put((float) (inter_p.x - this->prev_end->x));
-            this->inter->put((float) inter_p.y);
-
         }
     }
 
@@ -442,8 +397,8 @@ namespace SemiMixedPLA {
             this->seg_2->l_line->get_intercept()
         );
         p_seg->updateExtrm();
-        p_seg->u_cvx = this->seg_2->u_cvx;
-        p_seg->l_cvx = this->seg_2->l_cvx;
+        p_seg->u_cvx.append(this->seg_2->u_cvx.at(0));
+        p_seg->l_cvx.append(this->seg_2->l_cvx.at(0));
         
         return p_seg;
     }
@@ -456,7 +411,7 @@ namespace SemiMixedPLA {
     }
 
     void SemiOptimalPLA::makeSemiConnect(int semi_case, double error) {
-        std::vector<Point2D> buffer;
+        std::vector<Point2D> shrink_points;
         int flag = semi_case;
 
         switch (flag) {
@@ -465,7 +420,7 @@ namespace SemiMixedPLA {
                 this->seg_2->updateExtrm();
                 do {
                     std::pair<Point2D, bool> result = this->seg_2->shrink(this->seg_1, error);
-                    buffer.push_back(result.first);
+                    shrink_points.push_back(result.first);
                     if (result.second) {
                         flag = this->__check(error);
                     }
@@ -504,9 +459,9 @@ namespace SemiMixedPLA {
         this->seg_1 = this->seg_2;
         this->seg_2 = new OptimalPLA();
 
-        for (int i=buffer.size()-1; i>=0; i--) {
-            Point2D p = buffer.at(i);
-            this->seg_2->approximate(p, error);
+        std::reverse(shrink_points.begin(), shrink_points.end());
+        for (int i=0; i<shrink_points.size(); i++) {
+            this->seg_2->approximate(shrink_points[i], error);
         }
     }
 
@@ -549,124 +504,154 @@ namespace SemiMixedPLA {
     void Compression::finalize() {
         if (this->state == 0) {
             this->semi_segs_1->finalize(this->error, this->index);
+            this->state = 3;
+            this->yield();
+
+            this->buffer.clear();
+            delete this->semi_segs_1;
         }
         if (this->state == 1) {
-            if (this->semi_segs_1->seg_count > this->semi_segs_2->seg_count) {
-                delete this->semi_segs_1;
-                this->semi_segs_1 = this->semi_segs_2;
+            for (int i=0; i<buffer.size(); i++) {
+                int flag = this->semi_segs_2->approximate(buffer[i], this->error);
+                if (flag != 0) {
+                    this->semi_segs_2->makeSemiConnect(flag, this->error);
+                    this->semi_segs_2->approximate(buffer[i], this->error);
+                }
             }
+            
+            this->state = this->semi_segs_1->seg_count > this->semi_segs_2->seg_count ? 3 : 2;
+            if (this->state == 2) this->semi_segs_1->finalize(this->error, this->index);
+            else if (this->state == 3) this->semi_segs_2->finalize(this->error, this->index);
+            this->yield();
 
-            this->semi_segs_1->finalize(this->error, this->index);
+            this->buffer.clear();
+            delete this->semi_segs_1;
+            delete this->semi_segs_2;
         }
-        
-        this->state = 1;
-        this->yield();
-
-        delete this->semi_segs_1;
     }
 
     BinObj* Compression::serialize() {
-        if (this->state == 1) return this->semi_segs_1->getInter();
-        else if (this->state == 2) return this->semi_segs_1->getInter();
-        else return this->semi_segs_2->getInter();
+        if (this->state == 2 || this->state == 0) return this->semi_segs_1->getInter();
+        else if (this->state == 3) return this->semi_segs_2->getInter();
 
         return nullptr;
     }
 
     void Compression::compress(Univariate* data) {
         Point2D p(this->index++, data->get_value());
-        
-        if (this->state == 0) {            
+                
+        if (this->state == 0) {
             int flag = this->semi_segs_1->approximate(p, this->error);
+
             if (flag == 1 || flag == 2) {
                 this->semi_segs_1->makeSemiConnect(flag, this->error);
                 this->semi_segs_1->approximate(p, this->error);
             }
             else if (flag == 3) {
-                this->state = 1;
                 this->yield();
+                this->state = 1;
                 this->semi_segs_2 = new SemiOptimalPLA(
                     this->semi_segs_1->getPendSeg(),
                     this->semi_segs_1->getPendPoint()
                 );
+
                 this->semi_segs_1->makeSemiConnect(flag, this->error);
             }
         }
         if (this->state == 1) {
-            
-            int flag_2 = this->semi_segs_2->approximate(p, this->error);
-            int flag_1 = this->semi_segs_1->approximate(p, this->error);
-            
-            if (flag_1 != 0) this->semi_segs_1->makeSemiConnect(flag_1, this->error);
+            this->buffer.push_back(p);
+            int flag = this->semi_segs_1->approximate(p, this->error);
 
-            if (flag_1 == 3) {
-                if (this->semi_segs_1->seg_count > this->semi_segs_2->seg_count + 1) {
-                    this->state = 3;
-                }
-                else if (this->semi_segs_1->seg_count > this->semi_segs_2->seg_count) {
-                    this->state = this->semi_segs_2->getLastEnd() >= this->semi_segs_1->getLastEnd() ? 3 : 2;
-                }
-                else if (this->semi_segs_1->seg_count == this->semi_segs_2->seg_count) {
-                    this->state = this->semi_segs_2->seg_1->t_end >= this->semi_segs_1->getLastEnd() ? 3 : 2;
-                }
+            if (flag == 1 || flag == 2) {
+                this->semi_segs_1->makeSemiConnect(flag, this->error);
+                this->semi_segs_1->approximate(p, this->error);
             }
+            else if (flag == 3) {
+                SemiOptimalPLA* temp = new SemiOptimalPLA(
+                    this->semi_segs_1->getPendSeg(),
+                    this->semi_segs_1->getPendPoint()
+                );
+                this->semi_segs_1->makeSemiConnect(3, this->error);
 
-            if (this->state != 2 && flag_2 != 0) this->semi_segs_2->makeSemiConnect(flag_2, this->error);
-        
-            if (this->state == 2) {
-                this->yield();
-                this->state = 0;
-                delete this->semi_segs_2;
+                for (int i=0; i<buffer.size() - 1; i++) {
+                    if (this->state == 2) break;    
 
-                int flag = this->semi_segs_1->approximate(p, this->error);
-                if (flag == 1 || flag == 2) {
-                    this->semi_segs_1->makeSemiConnect(flag, this->error);
-                    this->semi_segs_1->approximate(p, this->error);
+                    if (this->state == 1 && semi_segs_1->seg_count == semi_segs_2->seg_count + 1) {
+                        this->state = semi_segs_2->getLastEnd() >= this->semi_segs_1->getLastEnd() ? 3 : 2;
+                    }
+
+                    int flag = this->semi_segs_2->approximate(buffer[i], this->error);
+                    if (flag == 1 || flag == 2) {
+                        this->semi_segs_2->makeSemiConnect(flag, this->error);
+                        this->semi_segs_2->approximate(buffer[i], this->error);
+
+                        if (this->state == 1 && semi_segs_1->seg_count == semi_segs_2->seg_count + 1) {
+                            this->state = semi_segs_2->getLastEnd() >= this->semi_segs_1->getLastEnd() ? 3 : 2;
+                        }
+                    }
+                    else if (flag == 3) {
+                        this->semi_segs_2->makeSemiConnect(flag, this->error);
+                        int flag = this->semi_segs_2->approximate(buffer[i], this->error);
+                        if (this->state == 1 && semi_segs_1->seg_count == semi_segs_2->seg_count + 1) {
+                            this->state = semi_segs_2->getLastEnd() >= this->semi_segs_1->getLastEnd() ? 3 : 2;
+                        }
+
+                        if (flag != 0) {
+                            this->semi_segs_2->makeSemiConnect(flag, this->error);
+                            this->semi_segs_2->approximate(buffer[i], this->error);
+
+                            if (this->state == 1 && semi_segs_1->seg_count == semi_segs_2->seg_count + 1) {
+                                this->state = semi_segs_2->getLastEnd() >= this->semi_segs_1->getLastEnd() ? 3 : 2;
+                            }
+                        }
+                    }
                 }
-                else if (flag == 3) {
+                
+                this->state = this->state == 1 ? 3 : this->state;      
+                this->buffer.clear();
+
+                if (this->state == 2) {
+                    std::vector<Byte> bytes = this->semi_segs_1->inter->getBytes(8, true);
+                    this->yield();
+                    this->semi_segs_1->inter->put(bytes);
                     this->state = 1;
-                    this->semi_segs_2 = new SemiOptimalPLA(
-                        this->semi_segs_1->getPendSeg(),
-                        this->semi_segs_1->getPendPoint()
-                    );
-                    this->semi_segs_1->makeSemiConnect(flag, this->error);
-                    this->semi_segs_1->approximate(p, this->error);
-                    this->semi_segs_2->approximate(p, this->error);
-                }
-            }
-            else if (this->state == 3) {
-                this->yield();
-                this->state = 0;
-                delete this->semi_segs_1;
-                this->semi_segs_1 = this->semi_segs_2;
+                    delete this->semi_segs_2;
 
-                if (flag_2 != 0) {
+                    this->semi_segs_2 = temp;
                     int flag = this->semi_segs_1->approximate(p, this->error);
+
+                    if (flag != 0) {
+                        this->semi_segs_1->makeSemiConnect(flag, this->error);
+                        this->semi_segs_1->approximate(p, this->error);
+                    }
+                    this->buffer.push_back(p);              
+                }
+                else if (this->state == 3) {
+                    this->yield();
+                    this->state = 0;
+                    delete this->semi_segs_1;
+                    this->semi_segs_1 = this->semi_segs_2;
+
+                    int flag = this->semi_segs_2->approximate(p, this->error);
                     if (flag == 1 || flag == 2) {
                         this->semi_segs_1->makeSemiConnect(flag, this->error);
                         this->semi_segs_1->approximate(p, this->error);
                     }
                     else if (flag == 3) {
+                        this->semi_segs_1->seg_count = 1;
                         this->state = 1;
                         this->semi_segs_2 = new SemiOptimalPLA(
                             this->semi_segs_1->getPendSeg(),
                             this->semi_segs_1->getPendPoint()
                         );
-                        this->semi_segs_1->makeSemiConnect(flag, this->error);
-                        this->semi_segs_1->approximate(p, this->error);
-                        this->semi_segs_2->approximate(p, this->error);
-                    }
-                }
-            }
-            else {
-                if (flag_1 != 0) {
-                    this->semi_segs_1->approximate(p, this->error);
-                }
-                if (flag_2 != 0) {
-                    int flag = this->semi_segs_2->approximate(p, this->error);
-                    if (flag != 0) {
-                        this->semi_segs_2->makeSemiConnect(flag, this->error);
-                        this->semi_segs_2->approximate(p, this->error);
+
+                        this->semi_segs_1->makeSemiConnect(3, this->error);
+                        int flag = this->semi_segs_1->approximate(p, this->error);
+                        if (flag != 0) {
+                            this->semi_segs_1->makeSemiConnect(flag, this->error);
+                            this->semi_segs_1->approximate(p, this->error);
+                        }
+                        this->buffer.push_back(p);
                     }
                 }
             }

@@ -1,10 +1,10 @@
 {
-    "data": "data/IoT-sensor/wind.csv",
+    "data": "data/system-monitoring/mem-avail.csv",
     "compress": "out/compress/mem-avail_swing-filter.bin",
     "decompress": "out/decompress/mem-avail_swing-filter.csv",
     "interval": 1,
     "algorithm": {
         "name": "swing-filter",
-        "error":0.32
+        "error": 3.932
     }
 }

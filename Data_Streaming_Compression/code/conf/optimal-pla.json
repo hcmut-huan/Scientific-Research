@@ -1,10 +1,10 @@
 {
-    "data": "data/power-grid/home-power.csv",
+    "data": "data/automobile/test.csv",
     "compress": "out/compress/mem-avail_optimal-pla.bin",
     "decompress": "out/decompress/mem-avail_optimal-pla.csv",
     "interval": 1,
     "algorithm": {
         "name": "optimal-pla",
-        "error": 6.847
+        "error": 1.3
     }
 }

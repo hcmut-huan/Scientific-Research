@@ -112,7 +112,7 @@ namespace SlideFilter {
             this->prev_g = new Line(g_k.get_slope(), g_k.get_intercept());
             this->prev_end = new Point2D(0, this->prev_g->subs(0));
             
-            obj->put((short) this->prev_end->x);
+            obj->put((float) this->prev_end->x);
             obj->put((float) this->prev_end->y);
         }
         else if (this->segment_pos == 2) {
@@ -237,7 +237,7 @@ namespace SlideFilter {
 
     CSVObj* Decompression::decompress(BinObj* compress_data) {
         if (this->prev_end == nullptr) {
-            unsigned short start = compress_data->getShort();
+            float start = compress_data->getFloat();
             float value = compress_data->getFloat();
             this->prev_end = new Point2D(start, value);
 

@@ -398,6 +398,7 @@ namespace SemiMixedPLA {
         private:
             double error = 0;
 
+            std::vector<Point2D> buffer;
             SemiOptimalPLA* semi_segs_1 = nullptr;
             SemiOptimalPLA* semi_segs_2 = nullptr;
 

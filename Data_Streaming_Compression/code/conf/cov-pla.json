@@ -1,10 +1,10 @@
 {
-    "data": "data/IoT-sensor/wind.csv",
+    "data": "data/system-monitoring/mem-avail.csv",
     "compress": "out/compress/mem-avail_cov-pla.bin",
     "decompress": "out/decompress/mem-avail_cov-pla.csv",
     "interval": 1,
     "algorithm": {
-        "name": "optimal-pla",
-        "error": 0.32
+        "name": "cov-pla",
+        "error": 3.932
     }
 }

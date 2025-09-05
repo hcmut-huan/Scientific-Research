@@ -74,6 +74,21 @@ class BinObj : public IOObj {
             return data;
         }
 
+        std::vector<Byte> getBytes(int n, bool last) {
+            if (last) {
+                std::vector<Byte> bytes(this->byte_vector.end() - n, this->byte_vector.end());
+                this->byte_vector.resize(this->byte_vector.size() - n);
+                
+                return bytes;
+            }
+            else {
+                std::vector<Byte> bytes(this->byte_vector.begin(), this->byte_vector.begin() + n);
+                this->byte_vector.erase(this->byte_vector.begin(), this->byte_vector.begin() + n);
+
+                return bytes;
+            }
+        }
+
         void put(short data) {
             this->byte_vector.push_back((data >> 8) & 0xff);
             this->byte_vector.push_back((data >> 0) & 0xff);

@@ -23,9 +23,9 @@ ERROR_MAPPER["starlight-curves"]="0.081 0.2 0.407 0.61 0.814"
 ERROR_MAPPER["bus-lat"]="0.002 0.005 0.011 0.017 0.022"
 ERROR_MAPPER["bus-lng"]="0.0032 0.008 0.0163 0.024 0.032"
 
-for ALGO in $ALGORITHMS; do
-    for INDEX in {0..4}; do
-        for FILE in $FILES; do
+for INDEX in {0..4}; do
+    for FILE in $FILES; do    
+        for ALGO in $ALGORITHMS; do
             if [[ $FILE == *"synthesis"* ]]; then
                 continue
             fi

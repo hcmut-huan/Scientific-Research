@@ -1,10 +1,10 @@
 {
-    "data": "data/finance/JPXJPY.csv",
-    "compress": "out/compress/JPXJPY_semi-mixed-pla.bin",
-    "decompress": "out/decompress/JPXJPY_semi-mixed-pla.csv",
+    "data": "data/system-monitoring/mem-avail.csv",
+    "compress": "out/compress/mem-avail_semi-mixed-pla.bin",
+    "decompress": "out/decompress/mem-avail_semi-mixed-pla.csv",
     "interval": 1,
     "algorithm": {
         "name": "semi-mixed-pla",
-        "error": 170.25
+        "error": 3.932
     }
 }

@@ -5,6 +5,6 @@
     "interval": 1,
     "algorithm": {
         "name": "semi-optimal-pla",
-        "error": 0.3912
+        "error": 3.932
     }
 }

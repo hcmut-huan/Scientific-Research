@@ -1,0 +1,11 @@
+{
+    "data": "data/system-monitoring/mem-avail.csv",
+    "compress": "out/compress/mem-avail_pmc.bin",
+    "decompress": "out/decompress/mem-avail_pmc.csv",
+    "interval": 1,
+    "algorithm": {
+        "name": "pmc",
+        "error": 0.3912,
+        "mode": "midrange"
+    }
+}

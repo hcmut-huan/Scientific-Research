@@ -245,6 +245,70 @@ namespace ConnIPLA {
     };
 };
 
+namespace ConnOptimalPLA {
+    // Source paper: ...
+    // Source path: src/piecewise-approximation/linear/conn-optimal-pla.cpp
+
+    class OptimalPLA {
+        public:
+            UpperHull u_cvx;
+            LowerHull l_cvx;
+
+        public:
+            long t_start = -1;
+            long t_end = -1;
+            bool is_complete = false;
+
+            Line* u_line = nullptr;
+            Line* l_line = nullptr;
+
+            OptimalPLA(Point2D u_p, Point2D l_p);
+            ~OptimalPLA();
+
+            Point2D* backCheck(OptimalPLA* prev);
+            void approximate(Point2D& p, double error);
+    };
+    
+    class Compression : public BaseCompression {
+        private:
+            double error = 0;
+
+            int state = 0;
+            std::vector<Point2D> buffer;
+            OptimalPLA* seg_1 = nullptr;
+            OptimalPLA* seg_2 = nullptr;
+            OptimalPLA* seg_3 = nullptr;
+            OptimalPLA* seg_4 = nullptr;
+
+            long index = 0;
+            Point2D* prev_end = nullptr;
+            Point2D* curr_end = nullptr;
+
+        protected:
+            void compress(Univariate* data) override;
+            BinObj* serialize() override;
+
+        public:
+            Compression(std::string output) : BaseCompression(output) {}      
+            void initialize(int count, char** params) override;
+            void finalize() override;
+    };
+
+    class Decompression : public BaseDecompression {
+        private:
+            long index = 0;
+            Point2D* prev_end = nullptr;
+
+        protected:
+            CSVObj* decompress(BinObj* compress_data) override;
+
+        public:
+            Decompression(std::string output, int interval, std::time_t basetime) : BaseDecompression(output, interval, basetime) {}
+            void initialize(int count, char** params) override;
+            void finalize() override;
+    };
+};
+
 namespace SemiOptimalPLA {
     // Source paper: An Optimal Online Semi-Connected PLA Algorithm With Maximum Error Bound
     // Source path: src/piecewise-approximation/linear/semi-optimal-pla.cpp

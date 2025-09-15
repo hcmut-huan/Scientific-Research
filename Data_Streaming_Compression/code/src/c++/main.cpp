@@ -69,6 +69,10 @@ int main(int argc, char** argv) {
         compressor = new ConnIPLA::Compression(COM_OUTPUT);
         decompressor = new ConnIPLA::Decompression(DECOM_OUTPUT, INTERVAL, ((Univariate*) data_stream.get(0))->get_time()); 
     }
+    else if (ALGO == "conn-optimal-pla") {
+        compressor = new ConnOptimalPLA::Compression(COM_OUTPUT);
+        decompressor = new ConnOptimalPLA::Decompression(DECOM_OUTPUT, INTERVAL, ((Univariate*) data_stream.get(0))->get_time()); 
+    }
     else if (ALGO == "semi-optimal-pla") {
         compressor = new SemiOptimalPLA::Compression(COM_OUTPUT);
         decompressor = new SemiOptimalPLA::Decompression(DECOM_OUTPUT, INTERVAL, ((Univariate*) data_stream.get(0))->get_time()); 

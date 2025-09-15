@@ -1,0 +1,10 @@
+{
+    "data": "data/scientific-research/fungi.csv",
+    "compress": "out/compress/fungi_conn-optimal-pla.bin",
+    "decompress": "out/decompress/fungi_conn-optimal-pla.csv",
+    "interval": 1,
+    "algorithm": {
+        "name": "conn-optimal-pla",
+        "error": 4.355
+    }
+}
